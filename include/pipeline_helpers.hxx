@@ -1,7 +1,15 @@
 #ifndef PIPELINE_HELPERS_HXX
 #define PIPELINE_HELPERS_HXX
 
+//stl
+#include <string>
+#include <sstream>
+#include <iomanip>
+
+// vigra
 #include <vigra/multi_array.hxx>
+
+
 
 
 
@@ -37,5 +45,14 @@ void remap(vigra::MultiArray<N, T>& src) {
     *it = 255*(*it - min_value)/(range);
   }
 }
+
+
+// zero padding int to string
+std::string zero_padding(int num, int n_zeros) {
+  std::ostringstream ss;
+  ss << std::setw(n_zeros) << std::setfill('0') << num;
+  return ss.str();
+}
+
 
 #endif /* PIPELINE_HELPERS_HXX */

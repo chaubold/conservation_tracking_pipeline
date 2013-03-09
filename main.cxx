@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <string>
+#include <vector>
 
 // boost
 #include <boost/filesystem.hpp>
@@ -52,10 +53,14 @@ int main(int argc, char** argv) {
 
     // load segmentation classifier
     string segmentation_ilp_path(dataset_folder + "/segment.ilp");
-    string rf_path("PixelClassification/ClassifierForests/Forest0000");
-    RandomForest<unsigned> rf;
-    if (!rf_import_HDF5(rf, segmentation_ilp_path, rf_path)) {
-      throw runtime_error("Could not load Random Forest classifier!");
+    vector<RandomForest<unsigned> > rfs;
+    for (int n_rf = 0; n_rf < 10; ++n_rf) {
+      string rf_path = "PixelClassification/ClassifierForests/Forest" + zero_padding(n_rf, 4);
+      cout << rf_path << "\n";
+      rfs.push_back(RandomForest<unsigned>());
+      if (!rf_import_HDF5(rfs[n_rf], segmentation_ilp_path, rf_path)) {
+	throw runtime_error("Could not load Random Forest classifier!");
+      }
     }
 
     // run segmentation for all tif files in the given folder
