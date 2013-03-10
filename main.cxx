@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <utility>
+#include <fstream>
 
 // boost
 #include <boost/filesystem.hpp>
@@ -63,11 +65,21 @@ int main(int argc, char** argv) {
       }
     }
 
+    // get features used in project
+    string feature_list_path = dataset_folder + "/features.txt";
+    vector<pair<string, string> > feature_list;
+    int read_status = read_features_from_file(feature_list_path, feature_list);
+    if (read_status == 1) throw runtime_error("Could not open file " + feature_list_path);
+    
+    
+
     // run segmentation for all tif files in the given folder
     // write results to <dataset_folder>/<dataset_sequence_segmentation>
     fs::directory_iterator end_itr;
+    vector<MultiArray<2, unsigned> > label_images;
     for (fs::directory_iterator dir_itr(tif_dir); dir_itr != end_itr; ++dir_itr) {
       string filename(dir_itr->path().string());
+      cout << "processing " + filename + " ...\n";
       if (dir_itr->path().extension().string().compare(".tif")) {
 	continue;
       }
@@ -83,9 +95,30 @@ int main(int argc, char** argv) {
       importImage(info, destImage(src));
       // map tp [0,255] if neccessary
       remap<DATATYPE, 2>(src);
-      
+
+      // calculate features
+      vector<pair<string, string> >::iterator it = feature_list.begin();
+      vector<vector<MultiArray<2, double> > > features;
+      int feature_dim = 0;
+      for (; it != feature_list.end(); ++it) {
+	cout << " Calculating feature " + it->first + "(s=" + it->second + ")\n";
+	feature_dim += feature_dim_lookup_size(it->first);
+	features.push_back(vector<MultiArray<2, double> >());
+	double scale = string_to_double(it->second);
+	int feature_status = get_features(src, features[features.size()-1], it->first, scale);
+	if (feature_status == 1)
+	  throw runtime_error("get_features not implemented for feature " + it->first);
+	else if (feature_status == 2)
+	  throw runtime_error("vector passed to get_features is not a zero-length vector");
+      }
     }
-    
+
+    // extract objects
+
+    // calculate features
+
+    // chaingrpah tracking
+
     return 0;
   }
   
