@@ -6,6 +6,7 @@
 #include <vector>
 #include <utility>
 #include <fstream>
+#include <map>
 
 // boost
 #include <boost/filesystem.hpp>
@@ -58,7 +59,6 @@ int main(int argc, char** argv) {
     vector<RandomForest<unsigned> > rfs;
     for (int n_rf = 0; n_rf < 10; ++n_rf) {
       string rf_path = "PixelClassification/ClassifierForests/Forest" + zero_padding(n_rf, 4);
-      cout << rf_path << "\n";
       rfs.push_back(RandomForest<unsigned>());
       if (!rf_import_HDF5(rfs[n_rf], segmentation_ilp_path, rf_path)) {
 	throw runtime_error("Could not load Random Forest classifier!");
@@ -70,7 +70,14 @@ int main(int argc, char** argv) {
     vector<pair<string, string> > feature_list;
     int read_status = read_features_from_file(feature_list_path, feature_list);
     if (read_status == 1) throw runtime_error("Could not open file " + feature_list_path);
-    
+
+
+    // set config
+    map<string, double> options;
+    string config_file_path = dataset_folder + "/config.txt";
+    int config_status = read_config_from_file(config_file_path, options);
+    if (config_status == 1) throw runtime_error("Could not open file " + config_file_path);
+
     
 
     // run segmentation for all tif files in the given folder
@@ -94,7 +101,8 @@ int main(int argc, char** argv) {
       
       importImage(info, destImage(src));
       // map tp [0,255] if neccessary
-      remap<DATATYPE, 2>(src);
+      // remap<DATATYPE, 2>(src);
+      renormalize_to_8bit<2, DATATYPE>(src, options["min"], options["max"]);
 
       // calculate features
       vector<pair<string, string> >::iterator it = feature_list.begin();
@@ -111,6 +119,29 @@ int main(int argc, char** argv) {
 	else if (feature_status == 2)
 	  throw runtime_error("vector passed to get_features is not a zero-length vector");
       }
+      MultiArray<2, double> feat(Shape2(1, feature_dim));
+      MultiArray<2, double> res_ar(Shape2(1, 2));
+      for (int x = 0; x < labels.shape()[0]; ++x) {
+	for (int y = 0; y < labels.shape()[1]; ++y) {
+	  int feat_index = 0;
+	  for (vector<vector<MultiArray<2, double> > >::iterator ft_vec_it = features.begin(); ft_vec_it != features.end(); ++ft_vec_it) {
+	    for (vector<MultiArray<2, double> >::iterator ft_it = ft_vec_it->begin(); ft_it != ft_vec_it->end(); ++ft_it, ++feat_index) {
+	      feat(0, feat_index) = (*ft_it)(x, y);
+	    }
+	  }
+	  double label_pred = 0.0;
+	  for (vector<RandomForest<unsigned> >::iterator rf_it = rfs.begin(); rf_it != rfs.end(); ++rf_it) {
+	    rf_it->predictProbabilities(feat, res_ar);
+	    label_pred += res_ar(0,1);
+	  }
+	  if (label_pred > 0.5*rfs.size())
+	    labels(x,y) = 1;
+	  else
+	    labels(x,y) = 0;
+	}
+      }
+      exportImage(srcImageRange(labels), ImageExportInfo((dir_itr->path().filename().string() + ".png").c_str()));
+      // cout << dir_itr->path().filename().string().c_str() << "\n";
     }
 
     // extract objects
@@ -129,6 +160,7 @@ int main(int argc, char** argv) {
   }
   
   catch (runtime_error& e) {
+    cout << "Program crashed!\n";
     cout << e.what();
     return 0;
   }

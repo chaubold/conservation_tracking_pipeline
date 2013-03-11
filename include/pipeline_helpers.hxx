@@ -10,6 +10,7 @@
 #include <utility>
 #include <stdexcept>
 #include <map>
+#include <algorithm>
 
 // vigra
 #include <vigra/multi_array.hxx>
@@ -79,6 +80,7 @@ int read_features_from_file(std::string path, std::vector<std::pair<std::string,
   return 0;
 }
 
+// lookup the size of given feature
 int feature_dim_lookup_size(std::string feature) {
   std::map<std::string, int> dims;
   dims["GaussianSmoothing"] = 1;
@@ -92,6 +94,7 @@ int feature_dim_lookup_size(std::string feature) {
   else return it->second;
 }
 
+// get features from string
 int get_features(const vigra::MultiArray<2, unsigned>& src, std::vector<vigra::MultiArray<2, double> >& dest, std::string feature, double scale) {
   if (dest.size()) return 2;
   if (!feature.compare("GaussianSmoothing")) {
@@ -116,7 +119,7 @@ int get_features(const vigra::MultiArray<2, unsigned>& src, std::vector<vigra::M
   return 0;
 }
 
-
+// extract number from string
 inline double string_to_double(std::string str) {
   std::istringstream is(str);
   double x;
@@ -126,8 +129,30 @@ inline double string_to_double(std::string str) {
 }
 
 
+int read_config_from_file(const std::string& path, std::map<std::string, double>& options) {
+  std::ifstream f(path.c_str());
+  if (!f.is_open()) return 1;
 
+  typedef boost::tokenizer<boost::escaped_list_separator<char> > Tokenizer;
+  std::string line;
+  while(getline(f, line)) {
+    Tokenizer tok(line);
+    options[*tok.begin()] = string_to_double(*(++tok.begin()));
+  }
+  f.close();  
+  return 0;
+}
 
+template <int N, class T>
+void renormalize_to_8bit(vigra::MultiArrayView<N, T>& array, double min, double max) {
+  double range = (max - min);
+  double val;
+  typename vigra::MultiArrayView<N, T>::iterator it = array.begin();
+  for (; it != array.end(); ++it) {
+    val = 255.0*(*it - min)/range;
+    *it = static_cast<T>(std::min(std::max(val, 0.0), 255.0));
+  }
+}
 
 
 #endif /* PIPELINE_HELPERS_HXX */
