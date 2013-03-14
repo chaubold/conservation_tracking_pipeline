@@ -38,8 +38,8 @@ using namespace vigra;
 using namespace vigra::acc;
 namespace fs = boost::filesystem;
 
-typedef unsigned DATATYPE;
-typedef vigra::CoupledIteratorType<2, DATATYPE, DATATYPE>::type Iterator;
+typedef FEATURETYPE DATATYPE;
+typedef vigra::CoupledIteratorType<2, unsigned, unsigned>::type Iterator;
 typedef Iterator::value_type Handle;
 typedef AccumulatorChainArray<Handle,
 				   Select<DataArg<1>, LabelArg<2>,
@@ -54,8 +54,9 @@ int main(int argc, char** argv) {
     if (argc < 3) {
       throw ArgumentError();
     }
-    bool presmoothing;
-    if (argc == 4) {
+    bool presmoothing = true;
+    if (argc >= 4) {
+      cout << "No presmoothing!\n";
       presmoothing = false;
     }
 
@@ -120,12 +121,16 @@ int main(int argc, char** argv) {
     // write results to <dataset_folder>/<dataset_sequence_segmentation>
     fs::directory_iterator end_itr;
     vector<MultiArray<2, unsigned> > label_images;
-    int timestep = 1;
+    int timestep = 0;
     pgmlink::TraxelStore ts;
-    for (fs::directory_iterator dir_itr(tif_dir); dir_itr != end_itr; ++dir_itr, ++timestep) {
-      string filename(dir_itr->path().string());
+    // sort filenames
+    vector<fs::path> fn_vec;
+    copy(fs::directory_iterator(tif_dir), fs::directory_iterator(), back_inserter(fn_vec));
+    sort(fn_vec.begin(), fn_vec.end());
+    for (vector<fs::path>::iterator dir_itr = fn_vec.begin(); dir_itr != fn_vec.end(); ++dir_itr, ++timestep) {
+      string filename(dir_itr->string());
       cout << "processing " + filename + " ...\n";
-      if (dir_itr->path().extension().string().compare(".tif")) {
+      if (dir_itr->extension().string().compare(".tif")) {
 	continue;
       }
       if (!isImage(filename.c_str())) {
@@ -142,7 +147,7 @@ int main(int argc, char** argv) {
       
       // map tp [0,255] if neccessary
       // remap<DATATYPE, 2>(src);
-      if (options.count("min") && options.count("max"))
+      if (options.count("min") > 0 && options.count("max") > 0)
 	cout << "normalizing image to [0, 255]\n";
 	renormalize_to_8bit<2, DATATYPE>(src_unsmoothed, options["min"], options["max"]);
 
@@ -155,37 +160,38 @@ int main(int argc, char** argv) {
 	features.push_back(vector<MultiArray<2, FEATURETYPE> >());
 	double scale = string_to_double(it->second);
 	double presmooth_sigma = 1.0;
-	if (scale <= 1.0 || !presmoothing)
+	if (scale <= 1.0 || !presmoothing) {
           presmooth_sigma = scale;
-        else
+        } else {          
           presmooth_sigma = sqrt(scale*scale - presmooth_sigma*presmooth_sigma);
-	cout << "  Presmoothing image (s=" << it->second << "," << presmooth_sigma << ")\n";
+        }
+	
 	vigra::ConvolutionOptions<2> opt;
 	opt.filterWindowSize(3.5);
 	if (presmoothing) {
 	  gaussianSmoothMultiArray(srcMultiArrayRange(src_unsmoothed), destMultiArray(src), presmooth_sigma, opt);
+          cout << "  Presmoothing image (s=" << it->second << "," << presmooth_sigma << ")\n";
 	} else {
 	  src = src_unsmoothed;
 	}
 	// gaussianSmoothing(srcImageRange(src_unsmoothed), destImage(src), presmooth_sigma);
 	double feature_sigma = 1.0;
+        double window_size = 2.0;
 	if (scale <= 1.0 || !presmoothing)
           feature_sigma = scale;
+        if (!presmoothing) {
+          window_size = 3.5;
+        }
+        
 	cout << "  Calculating feature " + it->first + "(s=" + it->second + "," << feature_sigma << ")\n";
-	int feature_status = get_features<2>(src, features[features.size()-1], it->first, feature_sigma);
-	for (unsigned index = 0; index < features[features.size()-1].size(); ++index) {
-	  stringstream ss;
-	  ss << features.size() << "_" << index;
-	  string number = ss.str();
-	  cout << "Maximum in Channel " + number + ": " << *argMax(features[features.size()-1][index].begin(), features[features.size()-1][index].end()) << "\n";
-	  exportImage(srcImageRange(features[features.size()-1][index]), ImageExportInfo(("feature" + number + ".tif").c_str()));
-	}
+	int feature_status = get_features<2>(src, features[features.size()-1], it->first, feature_sigma, window_size);
 		      
 	if (feature_status == 1)
 	  throw runtime_error("get_features not implemented for feature " + it->first);
 	else if (feature_status == 2)
 	  throw runtime_error("vector passed to get_features is not a zero-length vector");
 	// features[features.size()-1][0] *= 255.0/ *argMax(features[features.size()-1][0].begin(), features[features.size()-1][0].end());
+
       }
 
 
@@ -208,18 +214,21 @@ int main(int argc, char** argv) {
 	  label_pred_0 += res_ar(0,0);
 	  label_pred_1 += res_ar(0,1);
 	}
-	if (label_pred_1 > label_pred_0)
+	if (label_pred_1 > label_pred_0) {
 	  *label_it = 1;
-	else
+        } else {
 	  *label_it = 0;
+        }
       }
-      string segmentation_result_path = tif_dir_str + "_RES/" + dir_itr->path().filename().string() + ".png";
-      exportImage(srcImageRange(labels), ImageExportInfo(segmentation_result_path.c_str()));
 
       // extract objects
-      MultiArray<2, unsigned> label_image(src.shape());
+      MultiArray<2, unsigned> label_image(shape);
       int n_regions = labelImageWithBackground(srcImageRange(labels), destImage(label_image), 1, 0);
-      exportImage(srcImageRange(label_image), ImageExportInfo("labels.png"));
+      stringstream segmentation_result_path;
+      segmentation_result_path <<  tif_dir_str + "_RES/" + "mask" + zero_padding(timestep, 2) + ".tif";
+      exportImage(srcImageRange(label_image), ImageExportInfo(segmentation_result_path.str().c_str()));
+
+      
 
 
       // calculate features and build TraxelStore
