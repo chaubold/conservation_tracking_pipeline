@@ -54,6 +54,10 @@ int main(int argc, char** argv) {
     if (argc < 3) {
       throw ArgumentError();
     }
+    bool presmoothing;
+    if (argc == 4) {
+      presmoothing = false;
+    }
 
     // dataset variables
     rstrip(argv[1], '/');
@@ -151,18 +155,22 @@ int main(int argc, char** argv) {
 	features.push_back(vector<MultiArray<2, FEATURETYPE> >());
 	double scale = string_to_double(it->second);
 	double presmooth_sigma = 1.0;
-	if (scale <= 1.0)
-	  presmooth_sigma = scale;
-	else
-	  presmooth_sigma = sqrt(scale*scale - presmooth_sigma*presmooth_sigma);
+	if (scale <= 1.0 || !presmoothing)
+          presmooth_sigma = scale;
+        else
+          presmooth_sigma = sqrt(scale*scale - presmooth_sigma*presmooth_sigma);
 	cout << "  Presmoothing image (s=" << it->second << "," << presmooth_sigma << ")\n";
 	vigra::ConvolutionOptions<2> opt;
 	opt.filterWindowSize(3.5);
-	gaussianSmoothMultiArray(srcMultiArrayRange(src_unsmoothed), destMultiArray(src), presmooth_sigma, opt);
+	if (presmoothing) {
+	  gaussianSmoothMultiArray(srcMultiArrayRange(src_unsmoothed), destMultiArray(src), presmooth_sigma, opt);
+	} else {
+	  src = src_unsmoothed;
+	}
 	// gaussianSmoothing(srcImageRange(src_unsmoothed), destImage(src), presmooth_sigma);
 	double feature_sigma = 1.0;
-	if (scale <= 1.0)
-	  feature_sigma = scale;
+	if (scale <= 1.0 || !presmoothing)
+          feature_sigma = scale;
 	cout << "  Calculating feature " + it->first + "(s=" + it->second + "," << feature_sigma << ")\n";
 	int feature_status = get_features<2>(src, features[features.size()-1], it->first, feature_sigma);
 	for (unsigned index = 0; index < features[features.size()-1].size(); ++index) {
@@ -170,7 +178,7 @@ int main(int argc, char** argv) {
 	  ss << features.size() << "_" << index;
 	  string number = ss.str();
 	  cout << "Maximum in Channel " + number + ": " << *argMax(features[features.size()-1][index].begin(), features[features.size()-1][index].end()) << "\n";
-	  exportImage(srcImageRange(features[features.size()-1][index]), ImageExportInfo(("feature" + number + ".png").c_str()));
+	  exportImage(srcImageRange(features[features.size()-1][index]), ImageExportInfo(("feature" + number + ".tif").c_str()));
 	}
 		      
 	if (feature_status == 1)
