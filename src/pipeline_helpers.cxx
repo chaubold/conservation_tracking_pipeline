@@ -19,8 +19,43 @@
 // boost
 #include <boost/tokenizer.hpp>
 
+// pgmlink
+#include <pgmlink/traxels.h>
+#include <pgmlink/tracking.h>
+
 // own
 #include "pipeline_helpers.hxx"
+
+
+////
+//// ArgumentError
+////
+const char* ArgumentError::what() const throw() {return "Dataset folder and seqeunce not specified!\n";}
+
+
+////
+//// Lineage
+////
+Lineage::Lineage(int id, int t_start, int t_end, int parent, int o_id) :
+  id_(id), t_start_(t_start), t_end_(t_end), parent_(parent), o_id_(o_id) {
+  // do nothing, just initialize member variables
+}
+
+
+bool operator<(const Lineage& lhs, const Lineage& rhs) {
+  return lhs.id_ < rhs.id_;
+}
+
+/*std::stringstream& operator<<(std::stringstream& ss, const Lineage& lin) {
+  //ss << lin.id_; // << " " << lin.t_start_ << " " << lin.t_end_ << " " << lin.parent_;
+  ss << lin.t_start_;
+  return ss;
+  }*/
+
+std::ostream& operator<<(std::ostream& os, const Lineage& lin) {
+  os << lin.id_ << " " << lin.t_start_ << " " << lin.t_end_ << " " << lin.parent_;
+  return os;
+}
 
 
 void rstrip(char* c, char r) {
@@ -82,4 +117,38 @@ int read_config_from_file(const std::string& path, std::map<std::string, double>
   }
   f.close();  
   return 0;
+}
+
+
+// do the tracking
+std::vector<std::vector<pgmlink::Event> > track(pgmlink::TraxelStore& ts, std::map<std::string, double> options) {
+  if (options.count("app") == 0 ||
+      options.count("dis") == 0 ||
+      options.count("det") == 0 ||
+      options.count("mis") == 0 ||
+      options.count("opp") == 0 ||
+      options.count("for") == 0 ||
+      options.count("mdd") == 0 ||
+      options.count("min_angle") == 0 ||
+      options.count("ep_gap") == 0 ||
+      options.count("n_neighbors") == 0) {
+    throw std::runtime_error("Options for chaingraph missing!");
+  }
+  pgmlink::ChaingraphTracking tracker("none",
+                                      options["app"], // appearance
+                                      options["dis"], // disappearance
+                                      options["det"], // detection
+                                      options["mis"], // misdetection
+                                      false, // cellness by rf
+                                      options["opp"], // opportunity cost
+                                      options["for"], // forbidden cost
+                                      true, // with constraints
+                                      false, // fixed detections
+                                      options["mdd"], // mean div dist
+                                      options["min_angle"], // min angle
+                                      options["ep_gap"], // ep_gap
+                                      options["n_neighbors"], // n neighbors
+                                      false // alternative builder
+                                      );
+  return tracker(ts);
 }

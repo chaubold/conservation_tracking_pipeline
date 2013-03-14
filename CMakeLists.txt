@@ -46,5 +46,5 @@ ADD_DEFINITIONS(-DIL_STD)
 
 ADD_LIBRARY(pipeline_helpers STATIC src/pipeline_helpers.cxx)
 ADD_EXECUTABLE(isbi_pipeline main.cxx)
-TARGET_LINK_LIBRARIES(pipeline_helpers ${Boost_LIBRARIES} ${HDF5_LIBRARIES} hdf5_hl vigraimpex)
+TARGET_LINK_LIBRARIES(pipeline_helpers ${Boost_LIBRARIES} ${HDF5_LIBRARIES} hdf5_hl vigraimpex pgmlink)
 TARGET_LINK_LIBRARIES(isbi_pipeline ${Boost_LIBRARIES} ${HDF5_LIBRARIES} hdf5_hl vigraimpex pipeline_helpers pgmlink cplex ilocplex)

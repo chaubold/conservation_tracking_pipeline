@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <map>
 #include <algorithm>
+#include <set>
 
 // vigra
 #include <vigra/multi_array.hxx>
@@ -19,6 +20,10 @@
 #include <vigra/tinyvector.hxx>
 #include <vigra/functorexpression.hxx>
 #include <vigra/multi_tensorutilities.hxx>
+
+// pgmlink
+#include <pgmlink/traxels.h>
+#include <pgmlink/tracking.h>
 
 // boost
 #include <boost/tokenizer.hpp>
@@ -30,11 +35,44 @@ typedef vigra::MultiArray<2, FEATURETYPE> feature_image;
 
 
 // ArgumentError class
-class ArgumentError;
+class ArgumentError : public std::exception {
+public:
+  virtual const char* what() const throw();
+};
 
 
 // Lineage class  -- to be implemented!
-class Lineage;
+struct Lineage {
+  // lineage id
+  int id_;
+  // time of first appearance of lineage
+  int t_start_;
+  // time of disappearance of lineage
+  int t_end_;
+  // parent lineage
+  int parent_;
+  // object id in latest timestep
+  int o_id_;
+
+  // constructor providing all arguments
+  Lineage(int id=0, int t_start=0, int t_end=0, int parent=0, int o_id=0);
+
+  // overloading comparison operator
+  friend bool operator<(const Lineage& lhs, const Lineage& rhs);
+
+  // overloading operator<<
+  //friend std::stringstream& operator<<(std::stringstream& ss, const Lineage& lin);
+  //friend std::ostream& operator<<(std::ostream& os, const Lineage& lin);
+
+
+private:
+  //default constructor
+  // Lineage();
+  
+};
+
+//std::stringstream& operator<<(std::stringstream& ss, const Lineage& lin);
+std::ostream& operator<<(std::ostream& os, const Lineage& lin);
 
 
 // strip trailing slash
@@ -108,16 +146,34 @@ template <int N, class T>
 void renormalize_to_8bit(vigra::MultiArrayView<N, T>& array, double min, double max);
 
 
+// do the tracking
+std::vector<std::vector<pgmlink::Event> > track(pgmlink::TraxelStore& ts, std::map<std::string, double> options);
+
+
+// find lineage by object id
+Lineage& find_lineage_by_o_id(std::vector<Lineage>& lineage_vec, int o_id);
+
+
+// initialize lineages from first image
+template <int N>
+int initialize_lineages(std::vector<Lineage>& lineage_vec, vigra::MultiArrayView<N, unsigned> img, unsigned t_start = 0);
+
+
+// close lineages that have t_end_ == -1
+void close_open_lineages(std::vector<Lineage>& lineage_vec, int t_end);
+
+
+// relabel image based on lineage
+template<int N>
+void relabel_image(vigra::MultiArrayView<N, unsigned>, Lineage lineage);
+
+
+
+
 
 /* -------------------------------------------------- */
 /*                   IMPLEMENTATION                   */
 /* -------------------------------------------------- */
-
-
-class ArgumentError : public std::exception {
-public:
-  virtual const char* what() const throw() {return "Dataset folder and seqeunce not specified!\n";}
-};
 
 
 template <typename T, int N>
@@ -258,6 +314,20 @@ void renormalize_to_8bit(vigra::MultiArrayView<N, T>& array, double min, double 
     val = 255.0*(*it - min)/range;
     *it = static_cast<T>(std::min(std::max(val, 0.0), 255.0));
   }
+}
+
+
+template <int N>
+int initialize_lineages(std::vector<Lineage>& lineage_vec, vigra::MultiArrayView<N, unsigned> img, unsigned t_start) {
+  if (lineage_vec.size() > 0) {
+    return 1;
+  }
+  std::set<unsigned> unique_labels(img.begin(), img.end());
+  for (std::set<unsigned>::iterator it = ++unique_labels.begin(); it != unique_labels.end(); ++it) {
+    int id = static_cast<int>(*it);
+    lineage_vec.push_back(Lineage(id, t_start, -1, 0, id));
+  }
+  return 0;
 }
 
 

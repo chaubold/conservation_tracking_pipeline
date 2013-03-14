@@ -66,8 +66,11 @@ int main(int argc, char** argv) {
     string dataset_folder(argv[1]);
     string dataset_sequence(argv[2]);
     string tif_dir_str(dataset_folder + "/" + dataset_sequence);
+    string res_dir_str(dataset_folder + "/" + dataset_sequence+ "_RES");
+    
     
     fs::path tif_dir = fs::system_complete(tif_dir_str);
+    fs::path res_dir = fs::system_complete(res_dir_str);
 
     // check validity of dataset variables
     if (!fs::exists(tif_dir)) {
@@ -77,8 +80,8 @@ int main(int argc, char** argv) {
       throw runtime_error(tif_dir_str + " is not a directory");
     }
 
-    if (!fs::exists(fs::path(tif_dir_str + "_RES"))) {
-      if (!fs::create_directory(fs::path(tif_dir_str + "_RES"))) {
+    if (!fs::exists(res_dir)) {
+      if (!fs::create_directory(res_dir)) {
 	throw runtime_error("Could not create directory: " + tif_dir_str + "_RES");
       }
     }
@@ -148,7 +151,7 @@ int main(int argc, char** argv) {
       // map tp [0,255] if neccessary
       // remap<DATATYPE, 2>(src);
       if (options.count("min") > 0 && options.count("max") > 0)
-	cout << "normalizing image to [0, 255]\n";
+	// cout << "normalizing image to [0, 255]\n";
 	renormalize_to_8bit<2, DATATYPE>(src_unsmoothed, options["min"], options["max"]);
 
       // calculate features
@@ -170,7 +173,7 @@ int main(int argc, char** argv) {
 	opt.filterWindowSize(3.5);
 	if (presmoothing) {
 	  gaussianSmoothMultiArray(srcMultiArrayRange(src_unsmoothed), destMultiArray(src), presmooth_sigma, opt);
-          cout << "  Presmoothing image (s=" << it->second << "," << presmooth_sigma << ")\n";
+          // cout << "  Presmoothing image (s=" << it->second << "," << presmooth_sigma << ")\n";
 	} else {
 	  src = src_unsmoothed;
 	}
@@ -183,15 +186,16 @@ int main(int argc, char** argv) {
           window_size = 3.5;
         }
         
-	cout << "  Calculating feature " + it->first + "(s=" + it->second + "," << feature_sigma << ")\n";
+	// cout << "  Calculating feature " + it->first + "(s=" + it->second + "," << feature_sigma << ")\n";
 	int feature_status = get_features<2>(src, features[features.size()-1], it->first, feature_sigma, window_size);
 		      
 	if (feature_status == 1)
 	  throw runtime_error("get_features not implemented for feature " + it->first);
 	else if (feature_status == 2)
 	  throw runtime_error("vector passed to get_features is not a zero-length vector");
-	// features[features.size()-1][0] *= 255.0/ *argMax(features[features.size()-1][0].begin(), features[features.size()-1][0].end());
-
+        stringstream feat_stream;
+        feat_stream << "gsm_" << timestep << ".png";
+        exportImage(srcImageRange(features[features.size()-1][0]), ImageExportInfo(feat_stream.str().c_str()));
       }
 
 
@@ -224,6 +228,7 @@ int main(int argc, char** argv) {
       // extract objects
       MultiArray<2, unsigned> label_image(shape);
       int n_regions = labelImageWithBackground(srcImageRange(labels), destImage(label_image), 1, 0);
+      cout << "Detected " << n_regions << " connected components\n";
       stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str + "_RES/" + "mask" + zero_padding(timestep, 2) + ".tif";
       exportImage(srcImageRange(label_image), ImageExportInfo(segmentation_result_path.str().c_str()));
@@ -249,30 +254,36 @@ int main(int argc, char** argv) {
       }
     }
 
-    // chaingrpah tracking
-    pgmlink::ChaingraphTracking tracker("none",
-					10000., // appearance
-					10000., // disappearance
-					10., // detection
-					500., // misdetection
-					false, // cellness by rf
-					10000., // opportunity cost
-					0., // forbidden cost
-					true, // with constraints
-					false, // fixed detections
-					20., // mean div dist
-					0., // min angle
-					0.05, // ep_gap
-					2., // n neighbors
-					false // alternative builder
-					);
+
+    vector<vector<pgmlink::Event> > events = track(ts, options);
+    vector<Lineage> lineage_vec;
+
+
+    vector<fs::path> res_fn_vec;
+    copy(fs::directory_iterator(res_dir), fs::directory_iterator(), back_inserter(res_fn_vec));
+    sort(res_fn_vec.begin(), res_fn_vec.end());
+    cout << res_fn_vec[0].string() << "\n";
+
+
+    ImageImportInfo info_general(res_fn_vec[0].string().c_str());
+    Shape2 shape_general(info_general.shape());
+    MultiArray<2, unsigned> base_img(shape_general);
+    importImage(info_general, destImage(base_img));
+    initialize_lineages<2>(lineage_vec, base_img);
+    base_img = MultiArray<2, unsigned>();
+
+    for (vector<Lineage>::iterator lm_it = lineage_vec.begin(); lm_it != lineage_vec.end(); ++lm_it) {
+      cout << *lm_it << "\n";
+
+    }
     
-    vector<vector<pgmlink::Event> > events = tracker(ts);
-    for (vector<vector<pgmlink::Event> >::iterator ts_it = events.begin(); ts_it != events.end(); ++ts_it) {
-      for (vector<pgmlink::Event>::iterator ev_it = ts_it->begin(); ev_it != ts_it->end(); ++ev_it) {
-	cout << *ev_it << "\n";
-      }
-    }					
+      
+    for (vector<fs::path>::iterator dir_itr = res_fn_vec.begin()+1; dir_itr != res_fn_vec.end(); ++dir_itr, ++timestep) {
+      string filename(dir_itr->string());
+      cout << "processing " + filename + " ...\n";
+    }
+    
+    					
 
     return 0;
   }
