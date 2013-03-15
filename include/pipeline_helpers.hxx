@@ -541,6 +541,11 @@ void handle_timestep(const std::vector<pgmlink::Event>& events, std::vector<Line
       throw std::runtime_error("Could not handle event!");
     }
   }
+  for(std::vector<Lineage>::const_iterator it_lin = lineage_vec.begin(); it_lin != lineage_vec.end(); ++it_lin) {
+      if (*it_lin.o_id_ != -1) {
+         throw std::runtime_error("This is the guy!");
+      }
+  }
   // relabel image
   std::vector<std::pair<unsigned, int> >::iterator lin_it = lineages_to_be_relabeled.begin();
   // std::cout << timestep << "\n";
