@@ -36,8 +36,8 @@
 
 
 typedef float FEATURETYPE;
-typedef vigra::MultiArray<2, FEATURETYPE> feature_image;
-typedef vigra::CoupledIteratorType<2, unsigned, unsigned>::type label_img_iterator;
+typedef vigra::MultiArray<3, FEATURETYPE> feature_image;
+typedef vigra::CoupledIteratorType<3, unsigned, unsigned>::type label_img_iterator;
 typedef std::vector<unsigned> event_array;
 
 
@@ -316,8 +316,6 @@ void save_false_candidates(vigra::MultiArrayView<N, unsigned> image, std::map<un
   typename vigra::MultiArrayShape<N>::type shape = image.shape();
   std::transform(shape.begin(), shape.end(), inner_shape_1.begin(), inner_shape_1.begin(), std::minus<int>());
   vigra::MultiArrayView<N, unsigned> inner = image.subarray(inner_shape_0, inner_shape_1);
-  std::cout << "MULTIARRAYSUBARRAY SHAPE\n";
-  std::cout << inner.shape() << "\n";
   for (int dim = 0; dim < N; ++dim) {
     int length_of_dim = inner.shape()[dim];
 
