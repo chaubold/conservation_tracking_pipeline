@@ -183,10 +183,10 @@ int handle_move(std::vector<Lineage>& lineage_vec, std::vector<std::pair<unsigne
     return 1;
   }
 
-  std::cout << "Move from " << from << " to " << to << ": " << lineage_vec[lineage_index] << "  " << lineage_vec[lineage_index].o_id_ << "\n";
+  // std::cout << "Move from " << from << " to " << to << ": " << lineage_vec[lineage_index] << "  " << lineage_vec[lineage_index].o_id_ << "\n";
   lineage_vec[lineage_index].o_id_ = -1;
   lineages_to_be_relabeled.push_back(std::make_pair<unsigned, int>(lineage_index, to));
-  std::cout << "  " << *(--lineages_to_be_relabeled.end()) << "\n";
+  // std::cout << "  " << *(--lineages_to_be_relabeled.end()) << "\n";
   return 0;
 }
 

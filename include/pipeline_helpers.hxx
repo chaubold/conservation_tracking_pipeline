@@ -431,13 +431,13 @@ void handle_timestep(const std::vector<pgmlink::Event>& events, std::vector<Line
   }
   // relabel image
   std::vector<std::pair<unsigned, int> >::iterator lin_it = lineages_to_be_relabeled.begin();
-  std::cout << timestep << "\n";
+  // std::cout << timestep << "\n";
   for (; lin_it != lineages_to_be_relabeled.end(); ++lin_it) {
-    std::cout << lin_it->second << "  " << lineage_vec[lin_it->first].id_ << "\n";
+    // std::cout << lin_it->second << "  " << lineage_vec[lin_it->first].id_ << "\n";
     relabel_image<N>(labels_orig, labels_new, lin_it->second, lineage_vec[lin_it->first].id_);
     lineage_vec[lin_it->first].o_id_ = lin_it->second;
   }
-  std::cout << "\n";
+  // std::cout << "\n";
 }
 
 

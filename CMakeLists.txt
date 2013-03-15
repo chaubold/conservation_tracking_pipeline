@@ -2,6 +2,13 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 PROJECT(isbi_challenge)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_extensions/)
 
+# hacky:
+set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+
+SET(Boost_USE_STATIC_LIBS ON)
+SET(VIGRA_USE_STATIC_LIBS ON)
+SET(HDF5_USE_STATIC_LIBS ON)
+SET(PGMLINK_USE_STATIC_LIBS ON)
 
 ##
 # dependencies
@@ -21,9 +28,11 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_extensions/)
 	FORCE)
     ENDIF(NOT CMAKE_BUILD_TYPE)
 
-    SET(CMAKE_CXX_FLAGS "-Wall -Wextra -Wfatal-errors -std=c++98 -pedantic -pthread")
+    SET(CMAKE_CXX_FLAGS "-static -Wall -Wextra -Wfatal-errors -std=c++98 -pedantic -pthread -static-libgcc")
     SET(CMAKE_CXX_FLAGS_DEBUG "-Wno-long-long -g -O0")
     SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -Werror")
+    SET(CMAKE_EXE_LINKER_FLAGS "-static -Wall -Wextra -Wfatal-errors -std=c++98 -pedantic -pthread -static-libgcc")
+    SET(LINK_SEARCH_END_STATIC 1)
 
     SET(WITH_CHECKED_STL "True" CACHE BOOL "Build with checked libg++ for more robust code (may degrade performance).")
     IF(WITH_CHECKED_STL)
@@ -36,8 +45,8 @@ INCLUDE_DIRECTORIES(
 
 FILE(GLOB LIB_SOURCES src/*.cpp)
 
-find_package( Boost REQUIRED COMPONENTS filesystem system)
-find_package( PGMLINK REQUIRED)
+find_package(Boost REQUIRED COMPONENTS filesystem system)
+find_package(PGMLINK REQUIRED)
 
 INCLUDE_DIRECTORIES(include)
 
@@ -46,5 +55,6 @@ ADD_DEFINITIONS(-DIL_STD)
 
 ADD_LIBRARY(pipeline_helpers STATIC src/pipeline_helpers.cxx)
 ADD_EXECUTABLE(isbi_pipeline main.cxx)
-TARGET_LINK_LIBRARIES(pipeline_helpers ${Boost_LIBRARIES} ${HDF5_LIBRARIES} hdf5_hl vigraimpex pgmlink)
-TARGET_LINK_LIBRARIES(isbi_pipeline ${Boost_LIBRARIES} ${HDF5_LIBRARIES} hdf5_hl vigraimpex pipeline_helpers pgmlink cplex ilocplex)
+SET_TARGET_PROPERTIES(isbi_pipeline PROPERTIES LINK_SEARCH_START_STATIC 1 LINK_SEARCH_END_STATIC 1)
+TARGET_LINK_LIBRARIES(pipeline_helpers ${Boost_LIBRARIES} ${HDF5_LIBRARIES} hdf5_hl vigraimpex pgmlink cplex ilocplex concert)
+TARGET_LINK_LIBRARIES(isbi_pipeline pipeline_helpers ${Boost_LIBRARIES} ${HDF5_LIBRARIES} hdf5_hl vigraimpex pgmlink cplex ilocplex concert)
