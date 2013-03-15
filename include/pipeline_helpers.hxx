@@ -408,21 +408,25 @@ void handle_timestep(const std::vector<pgmlink::Event>& events, std::vector<Line
   std::vector<std::pair<unsigned, int> > lineages_to_be_relabeled;
   // take care of events and convert to lineages
   for (std::vector<pgmlink::Event>::const_iterator event_it = events.begin(); event_it != events.end(); ++event_it) {
+    int handle_status = 0;
     switch(event_it->type) {
     case pgmlink::Event::Move:
-      handle_move(lineage_vec, lineages_to_be_relabeled, event_it->traxel_ids);
+      handle_status = handle_move(lineage_vec, lineages_to_be_relabeled, event_it->traxel_ids);
       break;
     case pgmlink::Event::Division:
-      handle_split(lineage_vec, lineages_to_be_relabeled, event_it->traxel_ids, timestep, max_l_id);
+      handle_status = handle_split(lineage_vec, lineages_to_be_relabeled, event_it->traxel_ids, timestep, max_l_id);
       break;
     case pgmlink::Event::Disappearance:
-      handle_disappearance(lineage_vec, event_it->traxel_ids, timestep);
+      handle_status = handle_disappearance(lineage_vec, event_it->traxel_ids, timestep);
       break;
     case pgmlink::Event::Appearance:
-      handle_appearance(lineage_vec, lineages_to_be_relabeled, event_it->traxel_ids, timestep, max_l_id);
+      handle_status = handle_appearance(lineage_vec, lineages_to_be_relabeled, event_it->traxel_ids, timestep, max_l_id);
       break;
     default:
       break;
+    }
+    if (handle_status > 0) {
+      throw std::runtime_error("Could not handle event!");
     }
   }
   // relabel image

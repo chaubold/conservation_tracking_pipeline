@@ -238,6 +238,7 @@ int main(int argc, char** argv) {
       stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str + "_RES/" + "mask" + zero_padding(timestep, 2) + ".tif";
       exportImage(srcImageRange(label_image), ImageExportInfo(segmentation_result_path.str().c_str()));
+      exportImage(srcImageRange(label_image), ImageExportInfo(("labels" + zero_padding(timestep, 2) +".tif").c_str()));
 
       
 
@@ -262,6 +263,13 @@ int main(int argc, char** argv) {
 
 
     vector<vector<pgmlink::Event> > events = track(ts, options);
+    vector<vector<pgmlink::Event> >::const_iterator EV_IT = events.begin();
+    for(; EV_IT != events.end(); ++EV_IT) {
+      for (vector<pgmlink::Event>::const_iterator ev = EV_IT->begin(); ev != EV_IT->end(); ++ev) {
+        cout << *ev << "\n";
+      }
+      cout << "\n";
+    }
     vector<Lineage> lineage_vec;
 
 

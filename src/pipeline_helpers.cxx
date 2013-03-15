@@ -48,7 +48,7 @@ bool operator<(const Lineage& lhs, const Lineage& rhs) {
 }
 
 bool operator==(const Lineage& lhs, const int& rhs) {
-  return lhs.id_ == rhs;
+  return lhs.o_id_ == rhs;
 }
 
 /*std::stringstream& operator<<(std::stringstream& ss, const Lineage& lin) {
@@ -182,8 +182,11 @@ int handle_move(std::vector<Lineage>& lineage_vec, std::vector<std::pair<unsigne
   if (static_cast<unsigned>(lineage_index) == lineage_vec.size()) {
     return 1;
   }
-  
+
+  std::cout << "Move from " << from << " to " << to << ": " << lineage_vec[lineage_index] << "  " << lineage_vec[lineage_index].o_id_ << "\n";
+  lineage_vec[lineage_index].o_id_ = -1;
   lineages_to_be_relabeled.push_back(std::make_pair<unsigned, int>(lineage_index, to));
+  std::cout << "  " << *(--lineages_to_be_relabeled.end()) << "\n";
   return 0;
 }
 
@@ -196,7 +199,7 @@ int handle_split(std::vector<Lineage>& lineage_vec, std::vector<std::pair<unsign
   }
   const Lineage& lin = lineage_vec[lineage_index];
   for (event_array::const_iterator it = ++split.begin(); it != split.end(); ++it) {
-    Lineage child(max_l_id, timestep, -1, lin.id_, *it);
+    Lineage child(max_l_id, timestep, -1, lin.id_, -1);
     lineages_to_be_relabeled.push_back(std::make_pair<unsigned, int>(lineage_vec.size(), *it));
     lineage_vec.push_back(child);
     max_l_id += 1;
@@ -222,13 +225,13 @@ int handle_disappearance(std::vector<Lineage>& lineage_vec, const event_array& d
 
 int handle_appearance(std::vector<Lineage>& lineage_vec, std::vector<std::pair<unsigned, int> >& lineages_to_be_relabeled, const event_array& appearance, int timestep, int& max_l_id) {
   int app = appearance[0];
-  int lineage_index = find_lineage_by_o_id(lineage_vec, app);
-  if (static_cast<unsigned>(lineage_index) != lineage_vec.size()) {
+  // int lineage_index = find_lineage_by_o_id(lineage_vec, app);
+  /*if (static_cast<unsigned>(lineage_index) < lineage_vec.size()) {
     return 1;
-  }
-  Lineage lin(max_l_id, timestep, -1, 0, app);
-  lineage_vec.push_back(lin);
-  lineages_to_be_relabeled.push_back(std::make_pair<unsigned, int>(lineage_index, app));
+    }*/
+  Lineage lin(max_l_id, timestep, -1, 0, -1);
+  lineages_to_be_relabeled.push_back(std::make_pair<unsigned, int>(lineage_vec.size(), app));
+  lineage_vec.push_back(lin); 
   max_l_id += 1;
   return 0;
 }
