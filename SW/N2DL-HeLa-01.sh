@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ds="N2DL-HeLa"
 seq="01"
 
