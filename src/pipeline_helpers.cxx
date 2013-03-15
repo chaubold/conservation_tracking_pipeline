@@ -125,6 +125,17 @@ int read_config_from_file(const std::string& path, std::map<std::string, double>
 }
 
 
+bool get_rfs_from_file(std::vector<vigra::RandomForest<unsigned> >& rfs, std::string fn, std::string path_in_file, int n_forests, int n_leading_zeros) {
+  bool read_successful = false;
+  for (int n = 0; n < n_forests; ++n) {
+    std::string rf_path = path_in_file + zero_padding(n, n_leading_zeros);
+    rfs.push_back(vigra::RandomForest<unsigned>());
+    read_successful = vigra::rf_import_HDF5(rfs[n], fn, rf_path);
+  }
+  return read_successful;
+}
+
+
 // do the tracking
 std::vector<std::vector<pgmlink::Event> > track(pgmlink::TraxelStore& ts, std::map<std::string, double> options) {
   if (options.count("app") == 0 ||

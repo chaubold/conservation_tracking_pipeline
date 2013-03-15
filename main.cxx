@@ -101,30 +101,27 @@ int main(int argc, char** argv) {
     // load segmentation classifier
     string segmentation_ilp_path(dataset_folder + "/segment.ilp");
     vector<RandomForest<unsigned> > rfs;
-    for (int n_rf = 0; n_rf < 10; ++n_rf) {
-      string rf_path = "PixelClassification/ClassifierForests/Forest" + zero_padding(n_rf, 4);
-      rfs.push_back(RandomForest<unsigned>());
-      if (!rf_import_HDF5(rfs[n_rf], segmentation_ilp_path, rf_path)) {
-	throw runtime_error("Could not load Random Forest classifier!");
-      }
+    if (!get_rfs_from_file(rfs, segmentation_ilp_path)) {
+      throw runtime_error("Could not load Random Forest classifier!");
     }
+
 
     // get features used in project
     string feature_list_path = dataset_folder + "/features.txt";
     vector<pair<string, string> > feature_list;
     int read_status = read_features_from_file(feature_list_path, feature_list);
-    if (read_status == 1) throw runtime_error("Could not open file " + feature_list_path);
-    
-    //for (vector<pair<string, string> >::iterator fl_it = feature_list.begin(); fl_it != feature_list.end(); ++fl_it) {
-    //      maxSigma = max(string_to_double(fl_it->second), maxSigma);
-    //}
+    if (read_status == 1) {
+      throw runtime_error("Could not open file " + feature_list_path);
+    }
 
 
     // set config
     map<string, double> options;
     string config_file_path = dataset_folder + "/config.txt";
     int config_status = read_config_from_file(config_file_path, options);
-    if (config_status == 1) throw runtime_error("Could not open file " + config_file_path);
+    if (config_status == 1) {
+      throw runtime_error("Could not open file " + config_file_path);
+    }
 
     
 
@@ -155,12 +152,7 @@ int main(int argc, char** argv) {
       MultiArray<2, unsigned> labels(shape);
       
       importImage(info, destImage(src_unsmoothed));
-      
-      // map tp [0,255] if neccessary
-      // remap<DATATYPE, 2>(src);
-      if (options.count("min") > 0 && options.count("max") > 0)
-	// cout << "normalizing image to [0, 255]\n";
-	renormalize_to_8bit<2, DATATYPE>(src_unsmoothed, options["min"], options["max"]);
+
 
       // calculate features
       vector<pair<string, string> >::iterator it = feature_list.begin();
@@ -201,9 +193,6 @@ int main(int argc, char** argv) {
 	  throw runtime_error("get_features not implemented for feature " + it->first);
 	else if (feature_status == 2)
 	  throw runtime_error("vector passed to get_features is not a zero-length vector");
-        stringstream feat_stream;
-        feat_stream << "gsm_" << timestep << ".png";
-        exportImage(srcImageRange(features[features.size()-1][0]), ImageExportInfo(feat_stream.str().c_str()));
       }
 
 
@@ -236,6 +225,9 @@ int main(int argc, char** argv) {
       // extract objects
       MultiArray<2, unsigned> label_image(shape);
       int n_regions = labelImageWithBackground(srcImageRange(labels), destImage(label_image), 1, 0);
+      if (options.count("border") > 0) {
+        ignore_border_cc<2>(label_image, options["border"]);
+      }
       // cout << "Detected " << n_regions << " connected components\n";
       stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str + "_RES/" + "mask" + zero_padding(timestep, 2) + ".tif";

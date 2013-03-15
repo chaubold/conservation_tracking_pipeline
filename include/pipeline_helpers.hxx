@@ -12,6 +12,7 @@
 #include <map>
 #include <algorithm>
 #include <set>
+#include <functional>
 
 // vigra
 #include <vigra/multi_array.hxx>
@@ -102,6 +103,35 @@ int read_features_from_file(std::string path, std::vector<std::pair<std::string,
 
 // lookup the size of given feature
 int feature_dim_lookup_size(std::string feature);
+
+
+// get random_forests from file
+bool get_rfs_from_file(std::vector<vigra::RandomForest<unsigned> >& rfs,
+                       std::string fn,
+                       std::string path_in_file = "PixelClassification/ClassifierForests/Forest",
+                       int n_forests = 10,
+                       int n_leading_zeros = 4);
+
+
+
+// set all pixels of component to specified value
+template <int N>
+void set_pixels_of_cc_to_value(vigra::MultiArrayView<N, unsigned> image, unsigned id, unsigned value);
+
+
+// mark candidates for deletion
+template <int N>
+void collect_candidates_to_delete(vigra::MultiArrayView<N, unsigned> image, std::map<unsigned, bool>& candidates_to_delete, unsigned border_width);
+
+
+// save candidates falsely marked for deletion
+template <int N>
+void save_false_candidates(vigra::MultiArrayView<N, unsigned> image, std::map<unsigned, bool>& candidates_to_delete, unsigned border_width);
+
+
+// ignore connected components that do not lie within frame
+template <int N>
+void ignore_border_cc(vigra::MultiArrayView<N, unsigned> image, unsigned border_with = 0);
 
 
 // ilastik pixelclassification style difference of gaussians
@@ -241,6 +271,89 @@ void remap(vigra::MultiArray<N, T>& src) {
   typename vigra::MultiArray<N, T>::iterator it = src.begin();
   for (; it != src.end(); ++it) {
     *it = 255*(*it - min_value)/(range);
+  }
+}
+
+
+template <int N>
+void set_pixels_of_cc_to_value(vigra::MultiArrayView<N, unsigned> image, unsigned id, unsigned value) {
+  std::replace_if(image.begin(), image.end(), std::bind1st(std::equal_to<unsigned>(), id), value);
+}
+
+
+template <int N>
+void collect_candidates_to_delete(vigra::MultiArrayView<N, unsigned> image, std::map<unsigned, bool>& candidates_to_delete, unsigned border_width) {
+  for (int dim = 0; dim < N; ++dim) {
+    int length_of_dim = image.shape()[dim];
+    for (unsigned off = 0; off < border_width; ++off) {
+
+      // check lower border
+      vigra::MultiArrayView<N-1, unsigned, vigra::StridedArrayTag> slice = image.bindAt(dim, off);
+      typename::vigra::MultiArrayView<N-1, unsigned>::iterator slice_it = slice.begin();
+      for (; slice_it != slice.end(); ++slice_it) {
+        if (*slice_it > 0) {
+          candidates_to_delete[*slice_it] = true;
+        }
+      }
+
+      // check upper border
+      vigra::MultiArrayView<N-1, unsigned, vigra::StridedArrayTag> slice2 = image.bindAt(dim, length_of_dim - off - 1);
+      slice_it = slice2.begin();
+      for(; slice_it != slice2.end(); ++slice_it) {
+        if (*slice_it > 0) {
+          candidates_to_delete[*slice_it] = true;
+        }
+      }
+    }
+  }
+}
+
+
+template <int N>
+void save_false_candidates(vigra::MultiArrayView<N, unsigned> image, std::map<unsigned, bool>& candidates_to_delete, unsigned border_width) {
+  typename vigra::MultiArrayShape<N>::type inner_shape_0(border_width);
+  typename vigra::MultiArrayShape<N>::type inner_shape_1(border_width);
+  typename vigra::MultiArrayShape<N>::type shape = image.shape();
+  std::transform(shape.begin(), shape.end(), inner_shape_1.begin(), inner_shape_1.begin(), std::minus<int>());
+  vigra::MultiArrayView<N, unsigned> inner = image.subarray(inner_shape_0, inner_shape_1);
+  std::cout << "MULTIARRAYSUBARRAY SHAPE\n";
+  std::cout << inner.shape() << "\n";
+  for (int dim = 0; dim < N; ++dim) {
+    int length_of_dim = inner.shape()[dim];
+
+    // check lower border
+    vigra::MultiArrayView<N-1, unsigned, vigra::StridedArrayTag> slice = inner.bindAt(dim, 0);
+    typename::vigra::MultiArrayView<N-1, unsigned>::iterator slice_it = slice.begin();
+    for (; slice_it != slice.end(); ++slice_it) {
+      if (*slice_it > 0) {
+        candidates_to_delete[*slice_it] = false;
+      }
+    }
+
+    // check upper border
+    vigra::MultiArrayView<N-1, unsigned, vigra::StridedArrayTag> slice2 = inner.bindAt(dim, length_of_dim-1);
+    slice_it = slice2.begin();
+    for (; slice_it != slice2.end(); ++slice_it) {
+      if (*slice_it > 0) {
+        candidates_to_delete[*slice_it] = false;
+      }
+    }
+
+  }
+}
+
+
+template <int N>
+void ignore_border_cc(vigra::MultiArrayView<N, unsigned> image, unsigned border_width) {
+  std::map<unsigned, bool> candidates_to_delete;
+  collect_candidates_to_delete<N>(image, candidates_to_delete, border_width);
+  save_false_candidates<N>(image, candidates_to_delete, border_width);
+  
+  std::map<unsigned, bool>::iterator it = candidates_to_delete.begin();
+  for (; it != candidates_to_delete.end(); ++it) {
+    if (it->second) {
+      set_pixels_of_cc_to_value<N>(image, it->first, 0);
+    }
   }
 }
 
