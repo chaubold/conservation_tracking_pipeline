@@ -26,6 +26,7 @@
 #include <vigra/multi_convolution.hxx>
 #include <vigra/labelimage.hxx>
 #include <vigra/accumulator.hxx>
+#include <vigra/accessor.hxx>
 
 // pgmlink
 #include <pgmlink/traxels.h>
@@ -238,8 +239,8 @@ int main(int argc, char** argv) {
       // cout << "Detected " << n_regions << " connected components\n";
       stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str + "_RES/" + "mask" + zero_padding(timestep, 2) + ".tif";
-      exportImage(srcImageRange(label_image), ImageExportInfo(segmentation_result_path.str().c_str()).setPixelType("INT16"));
-      
+      // exportImage(srcImageRange<unsigned, StandardConstAccessor<short> >(label_image), ImageExportInfo(segmentation_result_path.str().c_str())); // .setPixelType("INT16"));
+      exportImage(srcImageRange(vigra::MultiArray<2, short>(label_image)), ImageExportInfo(segmentation_result_path.str().c_str()));
 
 
       // calculate features and build TraxelStore

@@ -6,6 +6,9 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_extensions/)
 ##
 # dependencies
 ##
+
+    set(Boost_USE_STATIC_LIBS   ON)
+    set(HDF5_USE_STATIC_LIBRARIES ON)       
     find_package(VIGRA REQUIRED)
     find_package(HDF5 REQUIRED)
 
@@ -24,6 +27,7 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_extensions/)
     SET(CMAKE_CXX_FLAGS "-Wall -Wextra -Wfatal-errors -std=c++98 -pedantic -pthread")
     SET(CMAKE_CXX_FLAGS_DEBUG "-Wno-long-long -g -O0")
     SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -Werror")
+    SET(CMAKE_EXE_LINKER_FLAGS "-static -static-libgcc -static-libstdc++") 
 
     SET(WITH_CHECKED_STL "True" CACHE BOOL "Build with checked libg++ for more robust code (may degrade performance).")
     IF(WITH_CHECKED_STL)
@@ -46,5 +50,7 @@ ADD_DEFINITIONS(-DIL_STD)
 
 ADD_LIBRARY(pipeline_helpers STATIC src/pipeline_helpers.cxx)
 ADD_EXECUTABLE(isbi_pipeline main.cxx)
-TARGET_LINK_LIBRARIES(pipeline_helpers ${Boost_LIBRARIES} ${HDF5_LIBRARIES} hdf5_hl vigraimpex pgmlink)
-TARGET_LINK_LIBRARIES(isbi_pipeline ${Boost_LIBRARIES} ${HDF5_LIBRARIES} hdf5_hl vigraimpex pipeline_helpers pgmlink cplex ilocplex)
+# TARGET_LINK_LIBRARIES(pipeline_helpers ${Boost_LIBRARIES} ${HDF5_LIBRARIES} hdf5_hl vigraimpex pgmlink)
+SET_TARGET_PROPERTIES(isbi_pipeline PROPERTIES LINK_SEARCH_START_STATIC 1 LINK_SEARCH_END_STATIC 1) 
+TARGET_LINK_LIBRARIES(isbi_pipeline pipeline_helpers pgmlink concert ilocplex cplex ann boost_serialization-mt boost_filesystem-mt boost_system-mt hdf5_hl hdf5 vigraimpex jpeg tiff png pthread z m)
+#${Boost_LIBRARIES} ${HDF5_LIBRARIES} hdf5_hl vigraimpex pipeline_helpers pgmlink cplex ilocplex)

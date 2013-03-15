@@ -22,6 +22,7 @@
 #include <vigra/multi_tensorutilities.hxx>
 #include <vigra/multi_iterator_coupled.hxx>
 #include <vigra/multi_iterator.hxx>
+#include <vigra/accessor.hxx>
 
 // pgmlink
 #include <pgmlink/traxels.h>
@@ -461,7 +462,8 @@ template <int N>
     vigra::importImage(info, destImage(labels_orig));
     labels_new *= 0;
     handle_timestep<N>(*events_it, lineage_vec, labels_orig, labels_new, timestep, max_l_id);
-    vigra::exportImage(srcImageRange(labels_new), vigra::ImageExportInfo(filename).setPixelType("INT16"));
+    // vigra::exportImage(srcImageRange(labels_new, vigra::StandardConstAccessor<short>()), vigra::ImageExportInfo(filename)); //.setPixelType("INT16"));
+    vigra::exportImage(srcImageRange(vigra::MultiArray<2, short>(labels_new)), vigra::ImageExportInfo(filename));
   }
   close_open_lineages(lineage_vec, timestep);
 }
