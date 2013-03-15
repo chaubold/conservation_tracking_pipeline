@@ -115,9 +115,11 @@ if __name__ == '__main__':
         img = np.dstack(img)
         img = np.array(img)
         # v = np.array(img)
-        if npType == np.uint16:
+        if npType == np.uint16 or options.max != -1:
+           print 'normalizing img ', t
            v = np.array((img-MIN)/minMaxDiff*255).astype(np.uint8)
         else:
+           print 'not normalizing img ', t
            v = np.array(img).astype(np.uint8)
 
         a = v
