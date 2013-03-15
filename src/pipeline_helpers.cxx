@@ -18,6 +18,7 @@
 
 // boost
 #include <boost/tokenizer.hpp>
+#include <boost/filesystem.hpp>
 
 // pgmlink
 #include <pgmlink/traxels.h>
@@ -174,7 +175,7 @@ void close_open_lineages(std::vector<Lineage>& lineage_vec, int t_end) {
 }
 
 
-int handle_move(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, const event_array& move) {
+int handle_move(std::vector<Lineage>& lineage_vec, std::vector<std::pair<unsigned, int> >& lineages_to_be_relabeled, const event_array& move) {
   int from = move[0];
   int to = move[1];
   int lineage_index = find_lineage_by_o_id(lineage_vec, from);
@@ -182,29 +183,26 @@ int handle_move(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineage
     return 1;
   }
   
-  Lineage& lin = lineage_vec[lineage_index];
-  lin.o_id_ = to;
-  lineages_to_be_relabeled.push_back(lin);
-
+  lineages_to_be_relabeled.push_back(std::make_pair<unsigned, int>(lineage_index, to));
   return 0;
 }
 
 
-int handle_split(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, const event_array& split, int timestep, int& max_l_id) {
+int handle_split(std::vector<Lineage>& lineage_vec, std::vector<std::pair<unsigned, int> >& lineages_to_be_relabeled, const event_array& split, int timestep, int& max_l_id) {
   int from = split[0];
   int lineage_index = find_lineage_by_o_id(lineage_vec, from);
   if (static_cast<unsigned>(lineage_index) == lineage_vec.size()) {
     return 1;
   }
-  Lineage& lin = lineage_vec[lineage_index];
-  lin.t_end_ = timestep-1;
-  lin.o_id_ = -1;
+  const Lineage& lin = lineage_vec[lineage_index];
   for (event_array::const_iterator it = ++split.begin(); it != split.end(); ++it) {
     Lineage child(max_l_id, timestep, -1, lin.id_, *it);
-    lineages_to_be_relabeled.push_back(child);
+    lineages_to_be_relabeled.push_back(std::make_pair<unsigned, int>(lineage_vec.size(), *it));
     lineage_vec.push_back(child);
     max_l_id += 1;
-  }  
+  }
+  lineage_vec[lineage_index].t_end_ = timestep - 1;
+  lineage_vec[lineage_index].o_id_ = -1;
   return 0;
 }
 
@@ -215,14 +213,14 @@ int handle_disappearance(std::vector<Lineage>& lineage_vec, const event_array& d
   if (static_cast<unsigned>(lineage_index) == lineage_vec.size()) {
     return 1;
   }
-  Lineage& lin = lineage_vec[lineage_index];
-  lin.t_end_ = timestep-1;
-  lin.o_id_ = -1;
+  // Lineage& lin = lineage_vec[lineage_index];
+  lineage_vec[lineage_index].t_end_ = timestep - 1;
+  lineage_vec[lineage_index].o_id_ = -1;
   return 0;
 }
 
 
-int handle_appearance(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, const event_array& appearance, int timestep, int& max_l_id) {
+int handle_appearance(std::vector<Lineage>& lineage_vec, std::vector<std::pair<unsigned, int> >& lineages_to_be_relabeled, const event_array& appearance, int timestep, int& max_l_id) {
   int app = appearance[0];
   int lineage_index = find_lineage_by_o_id(lineage_vec, app);
   if (static_cast<unsigned>(lineage_index) != lineage_vec.size()) {
@@ -230,7 +228,8 @@ int handle_appearance(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& l
   }
   Lineage lin(max_l_id, timestep, -1, 0, app);
   lineage_vec.push_back(lin);
-  lineages_to_be_relabeled.push_back(lin);
+  lineages_to_be_relabeled.push_back(std::make_pair<unsigned, int>(lineage_index, app));
+  max_l_id += 1;
   return 0;
 }
 
@@ -246,4 +245,15 @@ int write_lineages(const std::vector<Lineage>& lineage_vec, std::string filename
   }
   f.close();
   return 0;
+}
+
+
+bool contains_substring(std::string str, std::string substr) {
+  std::string::size_type index = str.find(substr);
+  return index != std::string::npos;
+}
+
+
+bool contains_substring_boost_path(const boost::filesystem::directory_entry& p, std::string substr) {
+  return contains_substring(p.path().string(), substr);
 }

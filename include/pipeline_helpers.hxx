@@ -175,19 +175,19 @@ void relabel_image(const vigra::MultiArrayView<N, unsigned> labels_orig, vigra::
 
 
 // edit lineages according to move
-int handle_move(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, const event_array& move);
+int handle_move(std::vector<Lineage>& lineage_vec, std::vector<std::pair<unsigned, int> >& lineages_to_be_relabeled, const event_array& move);
 
 
 // edit lineages according to split
-int handle_split(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, const event_array& split, int timestep, int& max_l_id);
+int handle_split(std::vector<Lineage>& lineage_vec, std::vector<std::pair<unsigned, int> >& lineages_to_be_relabeled, const event_array& split, int timestep, int& max_l_id);
 
 
-// edit lineages according to disappearance TO DO
+// edit lineages according to disappearance
 int handle_disappearance(std::vector<Lineage>& lineage_vec, const event_array& disappearance, int timestep);
 
 
-// edit lineages according to appearance TO DO
-int handle_appearance(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, const event_array& appearance, int timestep, int& max_l_id);
+// edit lineages according to appearance
+int handle_appearance(std::vector<Lineage>& lineage_vec, std::vector<std::pair<unsigned, int> >& lineages_to_be_relabeled, const event_array& appearance, int timestep, int& max_l_id);
 
 
 // handle timestep
@@ -208,6 +208,19 @@ void transform_events(const std::vector<std::vector<pgmlink::Event> >& events_ve
 
 // write lineages to text file
 int write_lineages(const std::vector<Lineage>& lineage_vec, std::string filename);
+
+
+// helper function to iterate over tif only
+bool contains_substring(std::string str, std::string substr);
+
+
+// same for boost_path
+bool contains_substring_boost_path(const boost::filesystem::directory_entry& p, std::string substr);
+
+
+// copy_if_own because not using c++11
+template <class InputIterator, class OutputIterator, class UnaryPredicate>
+OutputIterator copy_if_own (InputIterator first, InputIterator last, OutputIterator result, UnaryPredicate pred);
 
 
 
@@ -392,7 +405,7 @@ void relabel_image(const vigra::MultiArrayView<N, unsigned> labels_orig, vigra::
 
 template <int N>
 void handle_timestep(const std::vector<pgmlink::Event>& events, std::vector<Lineage>& lineage_vec, const vigra::MultiArrayView<N, unsigned> labels_orig, vigra::MultiArrayView<N, unsigned> labels_new, int timestep, int& max_l_id) {
-  std::vector<Lineage> lineages_to_be_relabeled;
+  std::vector<std::pair<unsigned, int> > lineages_to_be_relabeled;
   // take care of events and convert to lineages
   for (std::vector<pgmlink::Event>::const_iterator event_it = events.begin(); event_it != events.end(); ++event_it) {
     switch(event_it->type) {
@@ -413,10 +426,14 @@ void handle_timestep(const std::vector<pgmlink::Event>& events, std::vector<Line
     }
   }
   // relabel image
-  std::vector<Lineage>::iterator lin_it = lineages_to_be_relabeled.begin();
+  std::vector<std::pair<unsigned, int> >::iterator lin_it = lineages_to_be_relabeled.begin();
+  std::cout << timestep << "\n";
   for (; lin_it != lineages_to_be_relabeled.end(); ++lin_it) {
-    relabel_image<N>(labels_orig, labels_new, lin_it->o_id_, lin_it->id_);
+    std::cout << lin_it->second << "  " << lineage_vec[lin_it->first].id_ << "\n";
+    relabel_image<N>(labels_orig, labels_new, lin_it->second, lineage_vec[lin_it->first].id_);
+    lineage_vec[lin_it->first].o_id_ = lin_it->second;
   }
+  std::cout << "\n";
 }
 
 
@@ -443,6 +460,20 @@ template <int N>
     vigra::exportImage(srcImageRange(labels_new), vigra::ImageExportInfo(filename));
   }
   close_open_lineages(lineage_vec, timestep);
+}
+
+
+template <class InputIterator, class OutputIterator, class UnaryPredicate>
+OutputIterator copy_if_own (InputIterator first, InputIterator last, OutputIterator result, UnaryPredicate pred)
+{
+  while (first!=last) {
+    if (pred(*first)) {
+      *result = *first;
+      ++result;
+    }
+    ++first;
+  }
+  return result;
 }
 
 

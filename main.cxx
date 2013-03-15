@@ -10,9 +10,12 @@
 #include <algorithm>
 #include <cmath>
 #include <sstream>
+#include <utility>
 
 // boost
 #include <boost/filesystem.hpp>
+#include <boost/bind.hpp>
+#include <boost/function.hpp>
 
 // vigra
 #include <vigra/impex.hxx>
@@ -85,8 +88,11 @@ int main(int argc, char** argv) {
 	throw runtime_error("Could not create directory: " + tif_dir_str + "_RES");
       }
     }
-      
 
+
+    // make unary for copying only filepaths that contain *.tif
+    // std::unary_function<fs::directory_entry&, bool> tif_chooser = bind2nd(ptr_fun(contains_substring_boost_path), ".tif");
+    boost::function<bool (fs::directory_entry&)> tif_chooser = bind(contains_substring_boost_path, _1, ".tif");
     // int dim = 2;
 
 
@@ -128,7 +134,7 @@ int main(int argc, char** argv) {
     pgmlink::TraxelStore ts;
     // sort filenames
     vector<fs::path> fn_vec;
-    copy(fs::directory_iterator(tif_dir), fs::directory_iterator(), back_inserter(fn_vec));
+    copy_if_own(fs::directory_iterator(tif_dir), fs::directory_iterator(), back_inserter(fn_vec), tif_chooser);
     sort(fn_vec.begin(), fn_vec.end());
     for (vector<fs::path>::iterator dir_itr = fn_vec.begin(); dir_itr != fn_vec.end(); ++dir_itr, ++timestep) {
       string filename(dir_itr->string());
@@ -228,7 +234,7 @@ int main(int argc, char** argv) {
       // extract objects
       MultiArray<2, unsigned> label_image(shape);
       int n_regions = labelImageWithBackground(srcImageRange(labels), destImage(label_image), 1, 0);
-      cout << "Detected " << n_regions << " connected components\n";
+      // cout << "Detected " << n_regions << " connected components\n";
       stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str + "_RES/" + "mask" + zero_padding(timestep, 2) + ".tif";
       exportImage(srcImageRange(label_image), ImageExportInfo(segmentation_result_path.str().c_str()));
@@ -260,7 +266,7 @@ int main(int argc, char** argv) {
 
 
     vector<fs::path> res_fn_vec;
-    copy(fs::directory_iterator(res_dir), fs::directory_iterator(), back_inserter(res_fn_vec));
+    copy_if_own(fs::directory_iterator(res_dir), fs::directory_iterator(), back_inserter(res_fn_vec), tif_chooser);
     sort(res_fn_vec.begin(), res_fn_vec.end());
     cout << res_fn_vec[0].string() << "\n";
 
@@ -279,7 +285,7 @@ int main(int argc, char** argv) {
                         max_l_id,
                         1);
 
-    write_lineages(lineage_vec, "lineages.csv");
+    write_lineages(lineage_vec, res_dir_str + "/res_track.txt");
 
     
 
