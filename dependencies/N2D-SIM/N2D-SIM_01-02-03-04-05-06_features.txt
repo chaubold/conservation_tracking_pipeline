@@ -1,0 +1,12 @@
+GaussianSmoothing,5.0
+GaussianSmoothing,10.0
+LaplacianOfGaussians,5.0
+LaplacianOfGaussians,10.0
+GaussianGradientMagnitude,5.0
+GaussianGradientMagnitude,10.0
+DifferenceOfGaussians,5.0
+DifferenceOfGaussians,10.0
+StructureTensorEigenvalues,5.0
+StructureTensorEigenvalues,10.0
+HessianOfGaussianEigenvalues,5.0
+HessianOfGaussianEigenvalues,10.0

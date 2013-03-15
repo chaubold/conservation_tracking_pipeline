@@ -1,0 +1,11 @@
+app,10000
+dis,10000
+det,10
+mis,500
+opp,10000
+for,10000
+mdd,20
+min_angle,0
+ep_gap,0.00
+n_neighbors,2
+border,0
