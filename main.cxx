@@ -235,23 +235,24 @@ int main(int argc, char** argv) {
       stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str + "_RES/" + "mask" + zero_padding(timestep, 2) + ".tif";
       // exportImage(srcImageRange<unsigned, StandardConstAccessor<short> >(label_image), ImageExportInfo(segmentation_result_path.str().c_str())); // .setPixelType("INT16"));
-      exportImage(srcImageRange(vigra::MultiArray<2, unsigned short>(label_image)), ImageExportInfo(segmentation_result_path.str().c_str()));
+      
 
 
       // calculate features and build TraxelStore
       chain accu_chain;
-      std::vector<unsigned> filtered_labels;
+      std::vector<unsigned> filtered_labels_at_0;
       Iterator start = createCoupledIterator(label_image, label_image);
       Iterator end = start.getEndIterator();
       extractFeatures(start, end, accu_chain);
       for (int i = 1; i <= n_regions; ++i) {
          float size = get<Count>(accu_chain, i);
          if ((options.count("size_from") > 0 && size < options["size_from"]) || (options.count("size_to") > 0 && size > options["size_to"])) {
-            filtered_labels.push_back(i);
-            continue;
+           if (timestep == 0) {
+            filtered_labels_at_0.push_back(i);
+            set_pixels_of_cc_to_value<2>(label_image, i, 0);
+           }
+           continue;
          }
- 
-         filtered_labels.push_back(size);
          vector<float> com(get<Coord<Mean> >(accu_chain, i).begin(), get<Coord<Mean> >(accu_chain, i).end());
          if (com.size() == 2)
             com.push_back(0);
@@ -261,6 +262,7 @@ int main(int argc, char** argv) {
          pgmlink::Traxel trax(i, timestep, f_map);
          pgmlink::add(ts, trax);
       }
+      exportImage(srcImageRange(vigra::MultiArray<2, unsigned short>(label_image)), ImageExportInfo(segmentation_result_path.str().c_str()));
     }
 
 
