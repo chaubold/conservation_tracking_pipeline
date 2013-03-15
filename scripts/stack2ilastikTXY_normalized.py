@@ -61,7 +61,11 @@ if __name__ == '__main__':
                  break
           if found:
              break
-
+       if not found:
+           print 'the images are all uint8, no normalization needed'
+           npType = np.uint8
+           MAX = 255
+           MIN = 0
     
        if npType == np.uint16:
              MAX = 0
@@ -84,9 +88,9 @@ if __name__ == '__main__':
        assert options.determine is None
 
     minMaxDiff = MAX - MIN
-    assert minMaxDiff > 0
     print 'MAX = ', MAX
     print 'MIN = ', MIN
+    assert minMaxDiff > 0
     
     if options.determine:
       print 'no file written.'
