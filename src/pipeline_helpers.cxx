@@ -197,13 +197,14 @@ int handle_split(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineag
     return 1;
   }
   Lineage& lin = lineage_vec[lineage_index];
+  lin.t_end_ = timestep-1;
+  lin.o_id_ = -1;
   for (event_array::const_iterator it = ++split.begin(); it != split.end(); ++it) {
     Lineage child(max_l_id, timestep, -1, lin.id_, -1);
     lineages_to_be_relabeled.push_back(child);
+    lineage_vec.push_back(child);
     max_l_id += 1;
   }
-  lin.t_end_ = timestep-1;
-  lin.o_id_ = -1;
   return 0;
 }
 

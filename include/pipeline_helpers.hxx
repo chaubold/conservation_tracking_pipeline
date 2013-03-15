@@ -201,9 +201,9 @@ void transform_events(const std::vector<std::vector<pgmlink::Event> >& events_ve
                       std::vector<boost::filesystem::path>::iterator dir_it,
                       std::vector<boost::filesystem::path>::iterator end_it,
                       std::vector<Lineage>& lineage_vec,
-                      vigra::MultiArrayShape<N> shape,
+                      typename vigra::MultiArrayShape<N>::type shape,
                       int max_l_id,
-                      int timestep = 0);
+                      int timestep = 1);
 
 
 // write lineages to text file
@@ -394,7 +394,7 @@ template <int N>
 void handle_timestep(const std::vector<pgmlink::Event>& events, std::vector<Lineage>& lineage_vec, const vigra::MultiArrayView<N, unsigned> labels_orig, vigra::MultiArrayView<N, unsigned> labels_new, int timestep, int& max_l_id) {
   std::vector<Lineage> lineages_to_be_relabeled;
   // take care of events and convert to lineages
-  for (std::vector<pgmlink::Event>::iterator event_it = events.begin(); event_it != events.end(); ++event_it) {
+  for (std::vector<pgmlink::Event>::const_iterator event_it = events.begin(); event_it != events.end(); ++event_it) {
     switch(event_it->type) {
     case pgmlink::Event::Move:
       handle_move(lineage_vec, lineages_to_be_relabeled, event_it->traxel_ids);
@@ -407,12 +407,15 @@ void handle_timestep(const std::vector<pgmlink::Event>& events, std::vector<Line
       break;
     case pgmlink::Event::Appearance:
       handle_appearance(lineage_vec, lineages_to_be_relabeled, event_it->traxel_ids, timestep, max_l_id);
+      break;
+    default:
+      break;
     }
   }
   // relabel image
   std::vector<Lineage>::iterator lin_it = lineages_to_be_relabeled.begin();
   for (; lin_it != lineages_to_be_relabeled.end(); ++lin_it) {
-    relabel_image(labels_orig, labels_new, lin_it->o_id_, lin_it->id_);
+    relabel_image<N>(labels_orig, labels_new, lin_it->o_id_, lin_it->id_);
   }
 }
 
@@ -422,23 +425,24 @@ template <int N>
                         std::vector<boost::filesystem::path>::iterator dir_it,
                         std::vector<boost::filesystem::path>::iterator end_it,
                         std::vector<Lineage>& lineage_vec,
-                        vigra::MultiArrayShape<N> shape,
+                        typename vigra::MultiArrayShape<N>::type shape,
                         int max_l_id,
                         int timestep) {
   vigra::MultiArray<N, unsigned> labels_orig(shape);
   vigra::MultiArray<N, unsigned> labels_new(shape);
-  if (events_vec.size() != end_it - dir_it) {
+  if (static_cast<int>(events_vec.size()) != end_it - dir_it) {
     throw std::runtime_error("Number of files and number of timesteps do not agree!");
   }
-  std::vector<std::vector<pgmlink::Event> >::iterator events_it = events_vec.begin();
+  std::vector<std::vector<pgmlink::Event> >::const_iterator events_it = events_vec.begin();
   for (; events_it != events_vec.end(); ++events_it, ++timestep, ++dir_it) {
     const char* filename = dir_it->string().c_str();
     vigra::ImageImportInfo info(filename);
-    vigra::importImage(destImage(labels_orig), info);
+    vigra::importImage(info, destImage(labels_orig));
     labels_new *= 0;
-    handle_timestep(*events_it, lineage_vec, labels_orig, labels_new, timestep, max_l_id);
+    handle_timestep<N>(*events_it, lineage_vec, labels_orig, labels_new, timestep, max_l_id);
     vigra::exportImage(srcImageRange(labels_new), vigra::ImageExportInfo(filename));
   }
+  close_open_lineages(lineage_vec, timestep);
 }
 
 

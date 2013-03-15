@@ -266,10 +266,24 @@ int main(int argc, char** argv) {
 
 
     ImageImportInfo info_general(res_fn_vec[0].string().c_str());
-    Shape2 shape_general(info_general.shape());
+    MultiArrayShape<2>::type shape_general(info_general.shape());
     MultiArray<2, unsigned> base_img(shape_general);
     importImage(info_general, destImage(base_img));
-    initialize_lineages<2>(lineage_vec, base_img);
+    int max_l_id = initialize_lineages<2>(lineage_vec, base_img);
+
+    transform_events<2>(events,
+                        ++res_fn_vec.begin(),
+                        res_fn_vec.end(),
+                        lineage_vec,
+                        shape_general,
+                        max_l_id,
+                        1);
+
+    write_lineages(lineage_vec, "lineages.csv");
+
+    
+
+
     // base_img = MultiArray<2, unsigned>();
 
     /* close_open_lineages(lineage_vec, 500);
