@@ -254,16 +254,29 @@ int main(int argc, char** argv) {
            }
            continue;
          }
-         set_pixels_of_cc_to_value<2>(label_image, i, count_true_object);
-         vector<float> com(get<Coord<Mean> >(accu_chain, count_true_object).begin(), get<Coord<Mean> >(accu_chain, count_true_object).end());
-         if (com.size() == 2)
+         if (timestep == 0) {
+           set_pixels_of_cc_to_value<2>(label_image, i, count_true_object);
+           vector<float> com(get<Coord<Mean> >(accu_chain, count_true_object).begin(), get<Coord<Mean> >(accu_chain, count_true_object).end());
+           if (com.size() == 2)
             com.push_back(0);
-         pgmlink::FeatureMap f_map;
-         f_map["com"] = com;
-         f_map["count"].push_back(size);
-         pgmlink::Traxel trax(count_true_object, timestep, f_map);
-         pgmlink::add(ts, trax);
-         ++count_true_object;
+           pgmlink::FeatureMap f_map;
+           f_map["com"] = com;
+           f_map["count"].push_back(size);
+           pgmlink::Traxel trax(count_true_object, timestep, f_map);
+           pgmlink::add(ts, trax);
+           ++count_true_object;
+         }
+         else {
+           vector<float> com(get<Coord<Mean> >(accu_chain, i).begin(), get<Coord<Mean> >(accu_chain, i).end());
+           if (com.size() == 2)
+            com.push_back(0);
+           pgmlink::FeatureMap f_map;
+           f_map["com"] = com;
+           f_map["count"].push_back(size);
+           pgmlink::Traxel trax(i, timestep, f_map);
+           pgmlink::add(ts, trax);
+         }
+         
       }
       exportImage(srcImageRange(vigra::MultiArray<2, unsigned short>(label_image)), ImageExportInfo(segmentation_result_path.str().c_str()));
     }
