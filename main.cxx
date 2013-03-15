@@ -240,19 +240,26 @@ int main(int argc, char** argv) {
 
       // calculate features and build TraxelStore
       chain accu_chain;
+      std::vector<unsigned> filtered_labels;
       Iterator start = createCoupledIterator(label_image, label_image);
       Iterator end = start.getEndIterator();
       extractFeatures(start, end, accu_chain);
       for (int i = 1; i <= n_regions; ++i) {
-	float size = get<Count>(accu_chain, i);
-	vector<float> com(get<Coord<Mean> >(accu_chain, i).begin(), get<Coord<Mean> >(accu_chain, i).end());
-	if (com.size() == 2)
-	  com.push_back(0);
-	pgmlink::FeatureMap f_map;
-	f_map["com"] = com;
-	f_map["count"].push_back(size);
-	pgmlink::Traxel trax(i, timestep, f_map);
-	pgmlink::add(ts, trax);
+         float size = get<Count>(accu_chain, i);
+         if ((options.count("size_from") > 0 && size < options["size_from"]) || options.count("size_to") > 0 && size > options["size_to"]) {
+            filtered_labels.push_back(i);
+            continue;
+         }
+ 
+         filtered_labels.push_back(size);
+         vector<float> com(get<Coord<Mean> >(accu_chain, i).begin(), get<Coord<Mean> >(accu_chain, i).end());
+         if (com.size() == 2)
+            com.push_back(0);
+         pgmlink::FeatureMap f_map;
+         f_map["com"] = com;
+         f_map["count"].push_back(size);
+         pgmlink::Traxel trax(i, timestep, f_map);
+         pgmlink::add(ts, trax);
       }
     }
 
