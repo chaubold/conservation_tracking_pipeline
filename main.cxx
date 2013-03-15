@@ -238,7 +238,7 @@ int main(int argc, char** argv) {
       // cout << "Detected " << n_regions << " connected components\n";
       stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str + "_RES/" + "mask" + zero_padding(timestep, 2) + ".tif";
-      exportImage(srcImageRange(label_image), ImageExportInfo(segmentation_result_path.str().c_str()));
+      exportImage(srcImageRange(label_image), ImageExportInfo(segmentation_result_path.str().c_str()).setPixelType("INT16"));
       
 
 
