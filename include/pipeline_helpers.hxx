@@ -21,6 +21,7 @@
 #include <vigra/functorexpression.hxx>
 #include <vigra/multi_tensorutilities.hxx>
 #include <vigra/multi_iterator_coupled.hxx>
+#include <vigra/multi_iterator.hxx>
 
 // pgmlink
 #include <pgmlink/traxels.h>
@@ -28,12 +29,14 @@
 
 // boost
 #include <boost/tokenizer.hpp>
+#include <boost/filesystem.hpp>
 
 
 
 typedef float FEATURETYPE;
 typedef vigra::MultiArray<2, FEATURETYPE> feature_image;
 typedef vigra::CoupledIteratorType<2, unsigned, unsigned>::type label_img_iterator;
+typedef std::vector<unsigned> event_array;
 
 
 // ArgumentError class
@@ -172,24 +175,39 @@ void relabel_image(const vigra::MultiArrayView<N, unsigned> labels_orig, vigra::
 
 
 // edit lineages according to move
-int handle_move(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, const pgmlink::feature_array& move, int timestep);
+int handle_move(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, const event_array& move);
 
 
 // edit lineages according to split
-int handle_split(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, std::vector<Lineage>& lineages_to_be_deactivated, const pgmlink::feature_array& split, int timestep, int& max_l_id);
+int handle_split(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, const event_array& split, int timestep, int& max_l_id);
 
 
 // edit lineages according to disappearance TO DO
-int handle_disappearance(std::vector<Lineage>& lineage_vec, const pgmlink::feature_array& disappearance, int timestep);
+int handle_disappearance(std::vector<Lineage>& lineage_vec, const event_array& disappearance, int timestep);
 
 
 // edit lineages according to appearance TO DO
-int handle_appearance(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, const pgmlink::feature_array& appearance, int timestep, int& max_l_id);
+int handle_appearance(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, const event_array& appearance, int timestep, int& max_l_id);
 
 
 // handle timestep
 template <int N>
-void handle_timestep(const std::vector<pgmlink::Event>& events, const vigra::MultiArrayView<N, unsigned> label_orig, vigra::MultiArrayView<N, unsigend> label_new, int timestep, int& max_l_id);
+void handle_timestep(const std::vector<pgmlink::Event>& events, std::vector<Lineage>& lineave_vec, const vigra::MultiArrayView<N, unsigned> labels_orig, vigra::MultiArrayView<N, unsigned> labels_new, int timestep, int& max_l_id);
+
+
+// iterate over timesteps and handle every timestep
+template <int N>
+void transform_events(const std::vector<std::vector<pgmlink::Event> >& events_vec,
+                      std::vector<boost::filesystem::path>::iterator dir_it,
+                      std::vector<boost::filesystem::path>::iterator end_it,
+                      std::vector<Lineage>& lineage_vec,
+                      vigra::MultiArrayShape<N> shape,
+                      int max_l_id,
+                      int timestep = 0);
+
+
+// write lineages to text file
+int write_lineages(const std::vector<Lineage>& lineage_vec, std::string filename);
 
 
 
@@ -353,12 +371,12 @@ int initialize_lineages(std::vector<Lineage>& lineage_vec, vigra::MultiArrayView
     lineage_vec.push_back(Lineage(id, t_start, -1, 0, id));
   }
   // return maximum label
-  return *(unique_labels.end()-1) + 1;
+  return *(--unique_labels.end()) + 1;
 }
 
 
 template<int N>
-void relabel_image(const vigra::MultiArrayView<N, unsigned>& labels_orig, vigra::MultiArrayView<N, unsigned> labels_new, int object_id, int lineage_id) {
+void relabel_image(const vigra::MultiArrayView<N, unsigned> labels_orig, vigra::MultiArrayView<N, unsigned> labels_new, int object_id, int lineage_id) {
   label_img_iterator start = createCoupledIterator(labels_orig, labels_new);
   label_img_iterator end = start.getEndIterator();
   for (; start != end; ++start) {
@@ -373,9 +391,55 @@ void relabel_image(const vigra::MultiArrayView<N, unsigned>& labels_orig, vigra:
 
 
 template <int N>
-void handle_timestep(const std::vector<pgmlink::Event>& events, const vigra::MultiArrayView<N, unsigned> label_orig, vigra::MultiArrayView<N, unsigend> label_new, int timestep, int& max_l_id) {
-
+void handle_timestep(const std::vector<pgmlink::Event>& events, std::vector<Lineage>& lineage_vec, const vigra::MultiArrayView<N, unsigned> labels_orig, vigra::MultiArrayView<N, unsigned> labels_new, int timestep, int& max_l_id) {
+  std::vector<Lineage> lineages_to_be_relabeled;
+  // take care of events and convert to lineages
+  for (std::vector<pgmlink::Event>::iterator event_it = events.begin(); event_it != events.end(); ++event_it) {
+    switch(event_it->type) {
+    case pgmlink::Event::Move:
+      handle_move(lineage_vec, lineages_to_be_relabeled, event_it->traxel_ids);
+      break;
+    case pgmlink::Event::Division:
+      handle_split(lineage_vec, lineages_to_be_relabeled, event_it->traxel_ids, timestep, max_l_id);
+      break;
+    case pgmlink::Event::Disappearance:
+      handle_disappearance(lineage_vec, event_it->traxel_ids, timestep);
+      break;
+    case pgmlink::Event::Appearance:
+      handle_appearance(lineage_vec, lineages_to_be_relabeled, event_it->traxel_ids, timestep, max_l_id);
+    }
   }
+  // relabel image
+  std::vector<Lineage>::iterator lin_it = lineages_to_be_relabeled.begin();
+  for (; lin_it != lineages_to_be_relabeled.end(); ++lin_it) {
+    relabel_image(labels_orig, labels_new, lin_it->o_id_, lin_it->id_);
+  }
+}
+
+
+template <int N>
+  void transform_events(const std::vector<std::vector<pgmlink::Event> >& events_vec,
+                        std::vector<boost::filesystem::path>::iterator dir_it,
+                        std::vector<boost::filesystem::path>::iterator end_it,
+                        std::vector<Lineage>& lineage_vec,
+                        vigra::MultiArrayShape<N> shape,
+                        int max_l_id,
+                        int timestep) {
+  vigra::MultiArray<N, unsigned> labels_orig(shape);
+  vigra::MultiArray<N, unsigned> labels_new(shape);
+  if (events_vec.size() != end_it - dir_it) {
+    throw std::runtime_error("Number of files and number of timesteps do not agree!");
+  }
+  std::vector<std::vector<pgmlink::Event> >::iterator events_it = events_vec.begin();
+  for (; events_it != events_vec.end(); ++events_it, ++timestep, ++dir_it) {
+    const char* filename = dir_it->string().c_str();
+    vigra::ImageImportInfo info(filename);
+    vigra::importImage(destImage(labels_orig), info);
+    labels_new *= 0;
+    handle_timestep(*events_it, lineage_vec, labels_orig, labels_new, timestep, max_l_id);
+    vigra::exportImage(srcImageRange(labels_new), vigra::ImageExportInfo(filename));
+  }
+}
 
 
 #endif /* PIPELINE_HELPERS_HXX */

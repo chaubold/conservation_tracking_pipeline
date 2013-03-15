@@ -272,23 +272,19 @@ int main(int argc, char** argv) {
     initialize_lineages<2>(lineage_vec, base_img);
     // base_img = MultiArray<2, unsigned>();
 
-    close_open_lineages(lineage_vec, 500);
+    /* close_open_lineages(lineage_vec, 500);
     for (vector<Lineage>::iterator lm_it = lineage_vec.begin(); lm_it != lineage_vec.end(); ++lm_it) {
       cout << *lm_it << "\n";
 
-    }
+      }*/ 
     
-      
-    for (vector<fs::path>::iterator dir_itr = res_fn_vec.begin()+1; dir_itr != res_fn_vec.end(); ++dir_itr, ++timestep) {
-      string filename(dir_itr->string());
-      cout << "processing " + filename + " ...\n";
-    }
+    
 
-    vigra::MultiArray<2, unsigned> relabelll(shape_general);
+    /* vigra::MultiArray<2, unsigned> relabelll(shape_general);
     relabelll *= 0;
     cout << find_lineage_by_o_id(lineage_vec, 2) << "\n";
     relabel_image<2>(base_img, relabelll, 2, 50);
-    exportImage(srcImageRange(relabelll), ImageExportInfo("relabel.tif"));
+    exportImage(srcImageRange(relabelll), ImageExportInfo("relabel.tif")); */
     
     					
 
