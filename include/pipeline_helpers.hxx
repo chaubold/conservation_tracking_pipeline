@@ -461,7 +461,7 @@ template <int N>
     vigra::importImage(info, destImage(labels_orig));
     labels_new *= 0;
     handle_timestep<N>(*events_it, lineage_vec, labels_orig, labels_new, timestep, max_l_id);
-    vigra::exportImage(srcImageRange(labels_new), vigra::ImageExportInfo(filename));
+    vigra::exportImage(srcImageRange(labels_new), vigra::ImageExportInfo(filename).setPixelType("INT16"));
   }
   close_open_lineages(lineage_vec, timestep);
 }

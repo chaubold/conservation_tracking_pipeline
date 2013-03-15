@@ -8,7 +8,7 @@
 #  VIGRA_NUMPY_CORE_LIBRARY - Vigra's vigranumpycore library
 
 # hacky:
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+# set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 
 # configVersion.hxx only present, after build of Vigra
 FIND_PATH(VIGRA_INCLUDE_DIR vigra/configVersion.hxx PATHS $ENV{VIGRA_ROOT}/include ENV CPLUS_INCLUDE_PATH)

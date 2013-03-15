@@ -79,6 +79,7 @@ int main(int argc, char** argv) {
     if (!fs::exists(tif_dir)) {
       throw runtime_error(tif_dir_str + " does not exist");
     }
+    
     if (!fs::is_directory(tif_dir)) {
       throw runtime_error(tif_dir_str + " is not a directory");
     }
@@ -238,8 +239,6 @@ int main(int argc, char** argv) {
       stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str + "_RES/" + "mask" + zero_padding(timestep, 2) + ".tif";
       exportImage(srcImageRange(label_image), ImageExportInfo(segmentation_result_path.str().c_str()));
-      exportImage(srcImageRange(label_image), ImageExportInfo(("labels" + zero_padding(timestep, 2) +".tif").c_str()));
-
       
 
 
