@@ -244,6 +244,7 @@ int main(int argc, char** argv) {
       Iterator start = createCoupledIterator(label_image, label_image);
       Iterator end = start.getEndIterator();
       extractFeatures(start, end, accu_chain);
+      int count_true_object = 1;
       for (int i = 1; i <= n_regions; ++i) {
          float size = get<Count>(accu_chain, i);
          if ((options.count("size_from") > 0 && size < options["size_from"]) || (options.count("size_to") > 0 && size > options["size_to"])) {
@@ -253,14 +254,16 @@ int main(int argc, char** argv) {
            }
            continue;
          }
-         vector<float> com(get<Coord<Mean> >(accu_chain, i).begin(), get<Coord<Mean> >(accu_chain, i).end());
+         set_pixels_of_cc_to_value<2>(label_image, i, count_true_object);
+         vector<float> com(get<Coord<Mean> >(accu_chain, count_true_object).begin(), get<Coord<Mean> >(accu_chain, count_true_object).end());
          if (com.size() == 2)
             com.push_back(0);
          pgmlink::FeatureMap f_map;
          f_map["com"] = com;
          f_map["count"].push_back(size);
-         pgmlink::Traxel trax(i, timestep, f_map);
+         pgmlink::Traxel trax(count_true_object, timestep, f_map);
          pgmlink::add(ts, trax);
+         ++count_true_object;
       }
       exportImage(srcImageRange(vigra::MultiArray<2, unsigned short>(label_image)), ImageExportInfo(segmentation_result_path.str().c_str()));
     }
