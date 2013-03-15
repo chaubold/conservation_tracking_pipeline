@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
   // arg 1: dataset folder
   try {
     // check for correct number of arguments
-    if (argc < 5) {
+    if (argc < 6) {
       throw ArgumentError();
     }
     bool presmoothing = true;
@@ -66,12 +66,14 @@ int main(int argc, char** argv) {
     rstrip(argv[2], '/');
     rstrip(argv[3], '/');
     rstrip(argv[4], '/');
+    rstrip(argv[5], '/');
     string dataset_folder(argv[1]);
     string dataset_sequence(argv[2]);
     string tif_dir_str(dataset_folder + "/" + dataset_sequence);
     string res_dir_str(dataset_folder + "/" + dataset_sequence+ "_RES");
     string config_file_path(argv[3]);
     string rf_file_path(argv[4]);
+    string feature_file_path(argv[5]);
     
     
     fs::path tif_dir = fs::system_complete(tif_dir_str);
@@ -110,7 +112,7 @@ int main(int argc, char** argv) {
     // get features used in project
     string feature_list_path = dataset_folder + "/features.txt";
     vector<pair<string, string> > feature_list;
-    int read_status = read_features_from_file(feature_list_path, feature_list);
+    int read_status = read_features_from_file(feature_file_path, feature_list);
     if (read_status == 1) {
       throw runtime_error("Could not open file " + feature_list_path);
     }
@@ -314,7 +316,7 @@ int main(int argc, char** argv) {
   
   catch (ArgumentError& e) {
     cout << e.what();
-    cout << "Usage: " << argv[0] << " folder sequence config_path rf_path" << endl;
+    cout << "Usage: " << argv[0] << " folder sequence config_path rf_path feature_path" << endl;
     return 0;
   }
   
