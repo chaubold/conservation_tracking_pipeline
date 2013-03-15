@@ -246,7 +246,7 @@ int main(int argc, char** argv) {
       extractFeatures(start, end, accu_chain);
       for (int i = 1; i <= n_regions; ++i) {
          float size = get<Count>(accu_chain, i);
-         if ((options.count("size_from") > 0 && size < options["size_from"]) || options.count("size_to") > 0 && size > options["size_to"]) {
+         if ((options.count("size_from") > 0 && size < options["size_from"]) || (options.count("size_to") > 0 && size > options["size_to"])) {
             filtered_labels.push_back(i);
             continue;
          }
