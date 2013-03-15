@@ -55,22 +55,23 @@ int main(int argc, char** argv) {
   // arg 1: dataset folder
   try {
     // check for correct number of arguments
-    if (argc < 3) {
+    if (argc < 5) {
       throw ArgumentError();
     }
     bool presmoothing = true;
-    if (argc >= 4) {
-      cout << "No presmoothing!\n";
-      presmoothing = false;
-    }
+    
 
     // dataset variables
     rstrip(argv[1], '/');
     rstrip(argv[2], '/');
+    rstrip(argv[3], '/');
+    rstrip(argv[4], '/');
     string dataset_folder(argv[1]);
     string dataset_sequence(argv[2]);
     string tif_dir_str(dataset_folder + "/" + dataset_sequence);
     string res_dir_str(dataset_folder + "/" + dataset_sequence+ "_RES");
+    string config_file_path(argv[3]);
+    string rf_file_path(argv[4]);
     
     
     fs::path tif_dir = fs::system_complete(tif_dir_str);
@@ -101,7 +102,7 @@ int main(int argc, char** argv) {
     // load segmentation classifier
     string segmentation_ilp_path(dataset_folder + "/segment.ilp");
     vector<RandomForest<unsigned> > rfs;
-    if (!get_rfs_from_file(rfs, segmentation_ilp_path)) {
+    if (!get_rfs_from_file(rfs, rf_file_path)) { // segmentation_ilp_path)) {
       throw runtime_error("Could not load Random Forest classifier!");
     }
 
@@ -117,7 +118,7 @@ int main(int argc, char** argv) {
 
     // set config
     map<string, double> options;
-    string config_file_path = dataset_folder + "/config.txt";
+    // string config_file_path = dataset_folder + "/config.txt";
     int config_status = read_config_from_file(config_file_path, options);
     if (config_status == 1) {
       throw runtime_error("Could not open file " + config_file_path);
@@ -313,7 +314,7 @@ int main(int argc, char** argv) {
   
   catch (ArgumentError& e) {
     cout << e.what();
-    cout << "Usage: " << argv[0] << " folder sequence" << endl;
+    cout << "Usage: " << argv[0] << " folder sequence config_path rf_path" << endl;
     return 0;
   }
   
