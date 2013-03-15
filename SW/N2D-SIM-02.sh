@@ -1,9 +1,9 @@
 #!/bin/bash
 
-ds="N2DL-HeLa"
-seq="01"
+ds="N2D-SIM"
+seq="02"
 
-seqs="01-02"
+seqs="01-02-03-04-05-06"
 
 echo "Segmentation and Tracking for ${ds}-${seq}"
 

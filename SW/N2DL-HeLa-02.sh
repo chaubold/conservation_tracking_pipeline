@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ds="N2DL-HeLa"
-seq="01"
+seq="02"
 
 seqs="01-02"
 
