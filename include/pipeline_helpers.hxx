@@ -37,7 +37,7 @@
 
 typedef float FEATURETYPE;
 typedef vigra::MultiArray<3, FEATURETYPE> feature_image;
-typedef vigra::CoupledIteratorType<3, unsigned, unsigned>::type label_img_iterator;
+typedef vigra::CoupledIteratorType<2, unsigned, unsigned>::type label_img_iterator;
 typedef std::vector<unsigned> event_array;
 
 
@@ -574,7 +574,7 @@ template <int N>
     labels_new *= 0;
     handle_timestep<N>(*events_it, lineage_vec, labels_orig, labels_new, timestep, max_l_id);
     // vigra::exportImage(srcImageRange(labels_new, vigra::StandardConstAccessor<short>()), vigra::ImageExportInfo(filename)); //.setPixelType("INT16"));
-    vigra::exportImage(srcImageRange(vigra::MultiArray<2, short>(labels_new)), vigra::ImageExportInfo(filename));
+    vigra::exportImage(srcImageRange(vigra::MultiArray<2, unsigned short>(labels_new)), vigra::ImageExportInfo(filename));
   }
   close_open_lineages(lineage_vec, timestep);
 }

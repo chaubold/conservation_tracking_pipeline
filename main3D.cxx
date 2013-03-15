@@ -27,6 +27,8 @@
 #include <vigra/labelimage.hxx>
 #include <vigra/accumulator.hxx>
 #include <vigra/accessor.hxx>
+#include <vigra/voxelneighborhood.hxx>
+#include <vigra/labelvolume.hxx>
 
 // pgmlink
 #include <pgmlink/traxels.h>
@@ -43,7 +45,7 @@ using namespace vigra::acc;
 namespace fs = boost::filesystem;
 
 typedef FEATURETYPE DATATYPE;
-typedef vigra::CoupledIteratorType<3, unsigned, unsigned>::type Iterator;
+typedef vigra::CoupledIteratorType<2, unsigned, unsigned>::type Iterator;
 typedef Iterator::value_type Handle;
 typedef AccumulatorChainArray<Handle,
 				   Select<DataArg<1>, LabelArg<2>,
@@ -149,12 +151,16 @@ int main(int argc, char** argv) {
       }
       // read image
       ImageImportInfo info(filename.c_str());
-      Shape3 shape(info.shape());
+      Shape3 shape(info.shape()[0], info.shape()[1], info.numImages());
       MultiArray<3, DATATYPE> src_unsmoothed(shape);
       MultiArray<3, DATATYPE> src(shape);
       MultiArray<3, unsigned> labels(shape);
-      
-      importImage(info, destImage(src_unsmoothed));
+
+      for (int img_ind = 0; img_ind < info.numImages(); ++img_ind) {
+        MultiArray<2, DATATYPE> tmp_src(Shape2(shape[0], shape[1]));
+        importImage(info, destImage(tmp_src));
+        src_unsmoothed.bindAt(2, img_ind) = tmp_src;
+      }
 
 
       // calculate features
@@ -227,15 +233,17 @@ int main(int argc, char** argv) {
 
       // extract objects
       MultiArray<3, unsigned> label_image(shape);
-      int n_regions = labelImageWithBackground(srcImageRange(labels), destImage(label_image), 1, 0);
+      // int n_regions = labelVolumeWithBackground(srcMultiArrayRange(labels), destMultiArray(label_image), NeighborCode3DSix(), 0);
+       labelVolumeWithBackground(srcMultiArrayRange(labels), destMultiArray(label_image), NeighborCode3DSix(), 0);
       if (options.count("border") > 0) {
-        ignore_border_cc<2>(label_image, options["border"]);
+        ignore_border_cc<3>(label_image, options["border"]);
       }
       // cout << "Detected " << n_regions << " connected components\n";
       stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str + "_RES/" + "mask" + zero_padding(timestep, 2) + ".tif";
+    }
       // exportImage(srcImageRange<unsigned, StandardConstAccessor<short> >(label_image), ImageExportInfo(segmentation_result_path.str().c_str())); // .setPixelType("INT16"));
-      exportImage(srcImageRange(vigra::MultiArray<3, short>(label_image)), ImageExportInfo(segmentation_result_path.str().c_str()));
+      // exportImage(srcImageRange(vigra::MultiArray<2, short>(label_image.bindAt(2, 0))), ImageExportInfo(segmentation_result_path.str().c_str()));
 
 
       // calculate features and build TraxelStore
@@ -295,7 +303,7 @@ int main(int argc, char** argv) {
                         max_l_id,
                         1);
 
-    write_lineages(lineage_vec, res_dir_str + "/res_track.txt");
+                        write_lineages(lineage_vec, res_dir_str + "/res_track.txt");
 
     
 

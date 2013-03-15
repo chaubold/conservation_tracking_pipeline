@@ -235,7 +235,7 @@ int main(int argc, char** argv) {
       stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str + "_RES/" + "mask" + zero_padding(timestep, 2) + ".tif";
       // exportImage(srcImageRange<unsigned, StandardConstAccessor<short> >(label_image), ImageExportInfo(segmentation_result_path.str().c_str())); // .setPixelType("INT16"));
-      exportImage(srcImageRange(vigra::MultiArray<2, short>(label_image)), ImageExportInfo(segmentation_result_path.str().c_str()));
+      exportImage(srcImageRange(vigra::MultiArray<2, unsigned short>(label_image)), ImageExportInfo(segmentation_result_path.str().c_str()));
 
 
       // calculate features and build TraxelStore
