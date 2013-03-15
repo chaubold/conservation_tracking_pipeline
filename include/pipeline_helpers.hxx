@@ -514,6 +514,15 @@ void relabel_image(const vigra::MultiArrayView<N, unsigned> labels_orig, vigra::
   
 }
 
+template <class T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
+  os << "(";
+  for (typename std::vector<T>::const_iterator it = vec.begin(); it != vec.end(); ++it) {
+    os << *it << ",";
+  }
+  os << "\b)";
+  return os;
+}
 
 template <int N>
 void handle_timestep(const std::vector<pgmlink::Event>& events, std::vector<Lineage>& lineage_vec, const vigra::MultiArrayView<N, unsigned> labels_orig, vigra::MultiArrayView<N, unsigned> labels_new, int timestep, int& max_l_id) {
@@ -541,6 +550,7 @@ void handle_timestep(const std::vector<pgmlink::Event>& events, std::vector<Line
       throw std::runtime_error("Could not handle event!");
     }
   }
+  std::cout << lineage_vec << "\n";
   for(std::vector<Lineage>::const_iterator it_lin = lineage_vec.begin(); it_lin != lineage_vec.end(); ++it_lin) {
     if (it_lin->o_id_ != -1) {
       throw std::runtime_error("This is the guy!");
