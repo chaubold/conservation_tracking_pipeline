@@ -46,6 +46,10 @@ bool operator<(const Lineage& lhs, const Lineage& rhs) {
   return lhs.id_ < rhs.id_;
 }
 
+bool operator==(const Lineage& lhs, const int& rhs) {
+  return lhs.id_ == rhs;
+}
+
 /*std::stringstream& operator<<(std::stringstream& ss, const Lineage& lin) {
   //ss << lin.id_; // << " " << lin.t_start_ << " " << lin.t_end_ << " " << lin.parent_;
   ss << lin.t_start_;
@@ -151,4 +155,80 @@ std::vector<std::vector<pgmlink::Event> > track(pgmlink::TraxelStore& ts, std::m
                                       false // alternative builder
                                       );
   return tracker(ts);
+}
+
+
+int find_lineage_by_o_id(const std::vector<Lineage>& lineage_vec, int o_id) {
+  return std::find(lineage_vec.begin(), lineage_vec.end(), o_id) - lineage_vec.begin();
+}
+
+
+void close_open_lineages(std::vector<Lineage>& lineage_vec, int t_end) {
+  for (std::vector<Lineage>::iterator it = lineage_vec.begin(); it != lineage_vec.end(); ++it) {
+    if (it->t_end_ == -1) {
+      it->t_end_ = t_end;
+    } else {
+      continue;
+    }
+  }
+}
+
+
+int handle_move(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, const pgmlink::feature_array& move, int timestep) {
+  int from = move[0];
+  int to = move[1];
+  int lineage_index = find_lineage_by_o_id(lineage_vec, from);
+  if (lineage_index == lineage_vec.size()) {
+    return 1;
+  }
+  
+  Lineage& lin = lineage_vec[lineage_index];
+  lin.o_id_ = to;
+  lineages_to_be_relabeled.push_back(lin);
+
+  return 0;
+}
+
+
+int handle_split(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, std::vector<Lineage>& lineages_to_be_deactivated, const pgmlink::feature_array& split, int timestep, int& max_l_id) {
+  int from = split[0];
+  int lineage_index = find_lineage_by_o_id(lineage_vec, from);
+  if (lineage_index == lineage_vec.size()) {
+    return 1;
+  }
+  Lineage& lin = lineage_vec[lineage_index];
+  for (pgmlink::feature_array::iterator it = split.begin()+1; it != split.end(); ++it) {
+    Lineage child(max_l_id, timestep, -1, lin.id_, -1);
+    lineages_to_be_relabeled.push_back(child);
+    max_l_id += 1;
+  }
+  lin.t_end_ = timestep-1;
+  lin.o_id_ = -1;
+  return 0;
+}
+
+
+int handle_disappearance(std::vector<Lineage>& lineage_vec, const pgmlink::feature_array& disappearance, int timestep) {
+  int dis = dissapearance[0];
+  int lineage_index = find_lineage_by_o_id(lineage_vec, dis);
+  if (lineage_index == lineage_vec.size()) {
+    return 1;
+  }
+  Lineage& lin = lineage_vec[lineage_index];
+  lin.t_end_ = timestep-1;
+  lin.o_id_ = -1;
+  return 0;
+}
+
+
+int handle_appearance(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, const pgmlink::feature_array& appearance, int timestep, int& max_l_id) {
+  int app = appearance[0];
+  int lineage_index = find_lineage_by_o_id(lineage_vec, app);
+  if (lineage_index != lineage_vec.size()) {
+    return 1;
+  }
+  Lineage lin(max_l_id, timestep, -1, 0, app);
+  lineage_vec.push_back(lin);
+  lineages_to_be_relabeled.push_back(lin);
+  return 0;
 }

@@ -20,6 +20,7 @@
 #include <vigra/tinyvector.hxx>
 #include <vigra/functorexpression.hxx>
 #include <vigra/multi_tensorutilities.hxx>
+#include <vigra/multi_iterator_coupled.hxx>
 
 // pgmlink
 #include <pgmlink/traxels.h>
@@ -32,6 +33,7 @@
 
 typedef float FEATURETYPE;
 typedef vigra::MultiArray<2, FEATURETYPE> feature_image;
+typedef vigra::CoupledIteratorType<2, unsigned, unsigned>::type label_img_iterator;
 
 
 // ArgumentError class
@@ -59,6 +61,7 @@ struct Lineage {
 
   // overloading comparison operator
   friend bool operator<(const Lineage& lhs, const Lineage& rhs);
+  friend bool operator==(const Lineage& lhs, const int& rhs);
 
   // overloading operator<<
   //friend std::stringstream& operator<<(std::stringstream& ss, const Lineage& lin);
@@ -151,7 +154,7 @@ std::vector<std::vector<pgmlink::Event> > track(pgmlink::TraxelStore& ts, std::m
 
 
 // find lineage by object id
-Lineage& find_lineage_by_o_id(std::vector<Lineage>& lineage_vec, int o_id);
+int find_lineage_by_o_id(const std::vector<Lineage>& lineage_vec, int o_id);
 
 
 // initialize lineages from first image
@@ -165,7 +168,28 @@ void close_open_lineages(std::vector<Lineage>& lineage_vec, int t_end);
 
 // relabel image based on lineage
 template<int N>
-void relabel_image(vigra::MultiArrayView<N, unsigned>, Lineage lineage);
+void relabel_image(const vigra::MultiArrayView<N, unsigned> labels_orig, vigra::MultiArrayView<N, unsigned> labels_new, int object_id, int lineage_id);
+
+
+// edit lineages according to move
+int handle_move(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, const pgmlink::feature_array& move, int timestep);
+
+
+// edit lineages according to split
+int handle_split(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, std::vector<Lineage>& lineages_to_be_deactivated, const pgmlink::feature_array& split, int timestep, int& max_l_id);
+
+
+// edit lineages according to disappearance TO DO
+int handle_disappearance(std::vector<Lineage>& lineage_vec, const pgmlink::feature_array& disappearance, int timestep);
+
+
+// edit lineages according to appearance TO DO
+int handle_appearance(std::vector<Lineage>& lineage_vec, std::vector<Lineage>& lineages_to_be_relabeled, const pgmlink::feature_array& appearance, int timestep, int& max_l_id);
+
+
+// handle timestep
+template <int N>
+void handle_timestep(const std::vector<pgmlink::Event>& events, const vigra::MultiArrayView<N, unsigned> label_orig, vigra::MultiArrayView<N, unsigend> label_new, int timestep, int& max_l_id);
 
 
 
@@ -187,6 +211,7 @@ void remap(vigra::MultiArray<N, T>& src) {
     *it = 255*(*it - min_value)/(range);
   }
 }
+
 
 
 template <int N>
@@ -320,15 +345,37 @@ void renormalize_to_8bit(vigra::MultiArrayView<N, T>& array, double min, double 
 template <int N>
 int initialize_lineages(std::vector<Lineage>& lineage_vec, vigra::MultiArrayView<N, unsigned> img, unsigned t_start) {
   if (lineage_vec.size() > 0) {
-    return 1;
+    return -1;
   }
   std::set<unsigned> unique_labels(img.begin(), img.end());
   for (std::set<unsigned>::iterator it = ++unique_labels.begin(); it != unique_labels.end(); ++it) {
     int id = static_cast<int>(*it);
     lineage_vec.push_back(Lineage(id, t_start, -1, 0, id));
   }
-  return 0;
+  // return maximum label
+  return *(unique_labels.end()-1) + 1;
 }
+
+
+template<int N>
+void relabel_image(const vigra::MultiArrayView<N, unsigned>& labels_orig, vigra::MultiArrayView<N, unsigned> labels_new, int object_id, int lineage_id) {
+  label_img_iterator start = createCoupledIterator(labels_orig, labels_new);
+  label_img_iterator end = start.getEndIterator();
+  for (; start != end; ++start) {
+    if (static_cast<int>(start.get<1>()) == object_id) {
+      start.get<2>() = lineage_id;
+    } else {
+      continue;
+    }
+  }
+  
+}
+
+
+template <int N>
+void handle_timestep(const std::vector<pgmlink::Event>& events, const vigra::MultiArrayView<N, unsigned> label_orig, vigra::MultiArrayView<N, unsigend> label_new, int timestep, int& max_l_id) {
+
+  }
 
 
 #endif /* PIPELINE_HELPERS_HXX */
