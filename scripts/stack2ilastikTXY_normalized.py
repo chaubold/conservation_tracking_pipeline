@@ -61,7 +61,11 @@ if __name__ == '__main__':
                  break
           if found:
              break
-
+       if not found:
+           print 'the images are all uint8, no normalization needed'
+           npType = np.uint8
+           MAX = 255
+           MIN = 0
     
        if npType == np.uint16:
              MAX = 0
@@ -84,9 +88,9 @@ if __name__ == '__main__':
        assert options.determine is None
 
     minMaxDiff = MAX - MIN
-    assert minMaxDiff > 0
     print 'MAX = ', MAX
     print 'MIN = ', MIN
+    assert minMaxDiff > 0
     
     if options.determine:
       print 'no file written.'
@@ -118,7 +122,10 @@ if __name__ == '__main__':
 
         a = v
         if idx == 0:           
-           shape = [min(len(in_tiffs),np.uint32(options.end+1))]
+           if options.end > -1:
+              shape = [options.end]
+           else:
+              shape = [len(in_tiffs)]
            shape.extend(a.shape)
            chunks = [1,]
            if len(a.shape) == 3:
@@ -132,8 +139,11 @@ if __name__ == '__main__':
                   chunks.append(64)
                else:
                   chunks.append(s)
-           
-           ds = f.create_dataset('/volume/data', shape, compression=1, dtype=a.dtype, chunks=tuple(chunks))
+           try:
+              ds = f.create_dataset('/volume/data', shape, compression=1, dtype=a.dtype, chunks=tuple(chunks))
+           except:
+              print 'shape, a.dtype, chunks ', (shape, a.dtype, chunks)
+              raise
 	
         ds[idx,...] = a
 
