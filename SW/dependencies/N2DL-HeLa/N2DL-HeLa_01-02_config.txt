@@ -9,3 +9,4 @@ min_angle,0
 ep_gap,0.00
 n_neighbors,2
 border,25
+size_from,10
