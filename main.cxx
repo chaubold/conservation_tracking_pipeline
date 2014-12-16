@@ -36,6 +36,7 @@
 #include "pipeline_helpers.hxx"
 
 
+// TODO make namespaces explicit
 // namespaces to be used;
 using namespace std;
 using namespace vigra;
@@ -45,11 +46,10 @@ namespace fs = boost::filesystem;
 typedef FEATURETYPE DATATYPE;
 typedef vigra::CoupledIteratorType<2, unsigned, unsigned>::type Iterator;
 typedef Iterator::value_type Handle;
-typedef AccumulatorChainArray<Handle,
-				   Select<DataArg<1>, LabelArg<2>,
-					  Count, Coord<Mean> >
-			      > chain;
-
+typedef AccumulatorChainArray<
+  Handle,
+  Select<DataArg<1>, LabelArg<2>, Count, Coord<Mean> >
+> chain;
 
 int main(int argc, char** argv) {
   // arg 1: dataset folder
@@ -59,7 +59,6 @@ int main(int argc, char** argv) {
       throw ArgumentError();
     }
     bool presmoothing = true;
-    
 
     // dataset variables
     rstrip(argv[1], '/');
@@ -74,8 +73,7 @@ int main(int argc, char** argv) {
     string config_file_path(argv[3]);
     string rf_file_path(argv[4]);
     string feature_file_path(argv[5]);
-    
-    
+
     fs::path tif_dir = fs::system_complete(tif_dir_str);
     fs::path res_dir = fs::system_complete(res_dir_str);
 
@@ -83,31 +81,23 @@ int main(int argc, char** argv) {
     if (!fs::exists(tif_dir)) {
       throw runtime_error(tif_dir_str + " does not exist");
     }
-    
     if (!fs::is_directory(tif_dir)) {
       throw runtime_error(tif_dir_str + " is not a directory");
     }
-
     if (!fs::exists(res_dir)) {
       if (!fs::create_directory(res_dir)) {
-	throw runtime_error("Could not create directory: " + tif_dir_str + "_RES");
+        throw runtime_error("Could not create directory: " + tif_dir_str + "_RES");
       }
     }
 
-
     // make unary for copying only filepaths that contain *.tif
-    // std::unary_function<fs::directory_entry&, bool> tif_chooser = bind2nd(ptr_fun(contains_substring_boost_path), ".tif");
     boost::function<bool (fs::directory_entry&)> tif_chooser = bind(contains_substring_boost_path, _1, ".tif");
-    // int dim = 2;
-
 
     // load segmentation classifier
-    string segmentation_ilp_path(dataset_folder + "/segment.ilp");
     vector<RandomForest<unsigned> > rfs;
-    if (!get_rfs_from_file(rfs, rf_file_path)) { // segmentation_ilp_path)) {
+    if (!get_rfs_from_file(rfs, rf_file_path)) {
       throw runtime_error("Could not load Random Forest classifier!");
     }
-
 
     // get features used in project
     string feature_list_path = dataset_folder + "/features.txt";
@@ -117,20 +107,19 @@ int main(int argc, char** argv) {
       throw runtime_error("Could not open file " + feature_list_path);
     }
 
-
-    // set config
+    // get config
     map<string, double> options;
-    // string config_file_path = dataset_folder + "/config.txt";
     int config_status = read_config_from_file(config_file_path, options);
     if (config_status == 1) {
       throw runtime_error("Could not open file " + config_file_path);
     }
 
-    
-
+    //=========================================================================
+    // Segmentation
+    //=========================================================================
     // run segmentation for all tif files in the given folder
     // write results to <dataset_folder>/<dataset_sequence_segmentation>
-    fs::directory_iterator end_itr;
+
     vector<MultiArray<2, unsigned> > label_images;
     int timestep = 0;
     pgmlink::TraxelStore ts;
@@ -138,90 +127,101 @@ int main(int argc, char** argv) {
     vector<fs::path> fn_vec;
     copy_if_own(fs::directory_iterator(tif_dir), fs::directory_iterator(), back_inserter(fn_vec), tif_chooser);
     sort(fn_vec.begin(), fn_vec.end());
+
+    // iterate over the filenames
     for (vector<fs::path>::iterator dir_itr = fn_vec.begin(); dir_itr != fn_vec.end(); ++dir_itr, ++timestep) {
       string filename(dir_itr->string());
       cout << "processing " + filename + " ...\n";
+      // TODO is the following assertion deprecated?
       if (dir_itr->extension().string().compare(".tif")) {
-	continue;
+        continue;
       }
       if (!isImage(filename.c_str())) {
-	continue;
+        continue;
       }
-      // read image
+      // read the image
       ImageImportInfo info(filename.c_str());
       Shape2 shape(info.width(), info.height());
+      // initialize some multi arrays
       MultiArray<2, DATATYPE> src_unsmoothed(shape);
       MultiArray<2, DATATYPE> src(shape);
       MultiArray<2, unsigned> labels(shape);
-      
+      // read the image pixel data
       importImage(info, destImage(src_unsmoothed));
 
-
       // calculate features
-      vector<pair<string, string> >::iterator it = feature_list.begin();
-      vector<vector<MultiArray<2, FEATURETYPE> > > features;
       int feature_dim = 0;
+      vector<vector<MultiArray<2, FEATURETYPE> > > features;
+      vector<pair<string, string> >::iterator it = feature_list.begin();
       for (; it != feature_list.end(); ++it) {
-	feature_dim += feature_dim_lookup_size(it->first);
-	features.push_back(vector<MultiArray<2, FEATURETYPE> >());
-	double scale = string_to_double(it->second);
-	double presmooth_sigma = 1.0;
-	if (scale <= 1.0 || !presmoothing) {
+        feature_dim += feature_dim_lookup_size(it->first);
+        features.push_back(vector<MultiArray<2, FEATURETYPE> >());
+        double scale = string_to_double(it->second);
+        double presmooth_sigma = 1.0;
+        if (scale <= 1.0 || !presmoothing) {
           presmooth_sigma = scale;
-        } else {          
+        } else {
           presmooth_sigma = sqrt(scale*scale - presmooth_sigma*presmooth_sigma);
         }
-	
-	vigra::ConvolutionOptions<2> opt;
-	opt.filterWindowSize(3.5);
-	if (presmoothing) {
-	  gaussianSmoothMultiArray(srcMultiArrayRange(src_unsmoothed), destMultiArray(src), presmooth_sigma, opt);
+
+        // gaussian presmoothing of the image
+        vigra::ConvolutionOptions<2> opt;
+        opt.filterWindowSize(3.5); // TODO hard coded value?
+        if (presmoothing) {
+          gaussianSmoothMultiArray(srcMultiArrayRange(src_unsmoothed), destMultiArray(src), presmooth_sigma, opt);
           // cout << "  Presmoothing image (s=" << it->second << "," << presmooth_sigma << ")\n";
-	} else {
-	  src = src_unsmoothed;
-	}
-	// gaussianSmoothing(srcImageRange(src_unsmoothed), destImage(src), presmooth_sigma);
-	double feature_sigma = 1.0;
+        } else {
+          src = src_unsmoothed;
+        }
+
+        // TODO hard coded values in the following?
+        double feature_sigma = 1.0;
         double window_size = 2.0;
-	if (scale <= 1.0 || !presmoothing)
+        if (scale <= 1.0 || !presmoothing) {
           feature_sigma = scale;
+        }
         if (!presmoothing) {
           window_size = 3.5;
         }
-        
-	// cout << "  Calculating feature " + it->first + "(s=" + it->second + "," << feature_sigma << ")\n";
-	int feature_status = get_features<2>(src, features[features.size()-1], it->first, feature_sigma, window_size);
-		      
-	if (feature_status == 1)
-	  throw runtime_error("get_features not implemented for feature " + it->first);
-	else if (feature_status == 2)
-	  throw runtime_error("vector passed to get_features is not a zero-length vector");
+
+        // Calculate the features
+        // cout << "  Calculating feature " + it->first + "(s=" + it->second + "," << feature_sigma << ")\n";
+        int feature_status = get_features<2>(src, features[features.size()-1], it->first, feature_sigma, window_size);
+        // raise an error if the feature status is 1 or 2
+        if (feature_status == 1) {
+          throw runtime_error("get_features not implemented for feature " + it->first);
+        } else if (feature_status == 2) {
+          throw runtime_error("vector passed to get_features is not a zero-length vector");
+        }
       }
 
-
-      
-      MultiArray<2, FEATURETYPE> feat(Shape2(1, feature_dim));
-      MultiArray<2, FEATURETYPE> res_ar(Shape2(1, 2));
+      // initialize some variables outside the loop over all pixels
+      MultiArray<2, FEATURETYPE> feat(Shape2(1, feature_dim)); // feature vector for one pixel
+      MultiArray<2, FEATURETYPE> res_ar(Shape2(1, 2)); // results of rf
+      unsigned step_count = 0;
       MultiArray<2, unsigned>::iterator label_it = labels.begin();
-      unsigned step_count(0);
+      // TODO Have a closer look at the following code
+      // iterate over all labels and get the segmentation classification
       for (; label_it != labels.end(); ++label_it, ++step_count) {
-	int feat_index = 0;
-	for (vector<vector<MultiArray<2, FEATURETYPE> > >::iterator ft_vec_it = features.begin(); ft_vec_it != features.end(); ++ft_vec_it) {
-	  for (vector<MultiArray<2, FEATURETYPE> >::iterator ft_it = ft_vec_it->begin(); ft_it != ft_vec_it->end(); ++ft_it, ++feat_index) {
-	    feat(0, feat_index) = *(ft_it->begin()+step_count);
-	  }
-	}
-	double label_pred_0 = 0.0;
-	double label_pred_1 = 0.0;
-	for (vector<RandomForest<unsigned> >::iterator rf_it = rfs.begin(); rf_it != rfs.end(); ++rf_it) {
-	  rf_it->predictProbabilities(feat, res_ar);
-	  label_pred_0 += res_ar(0,0);
-	  label_pred_1 += res_ar(0,1);
-	}
-	if (label_pred_1 > label_pred_0) {
-	  *label_it = 1;
+        // write all features into a feature vector
+        int feat_index = 0;
+        for (vector<vector<MultiArray<2, FEATURETYPE> > >::iterator ft_vec_it = features.begin(); ft_vec_it != features.end(); ++ft_vec_it) {
+          for (vector<MultiArray<2, FEATURETYPE> >::iterator ft_it = ft_vec_it->begin(); ft_it != ft_vec_it->end(); ++ft_it, ++feat_index) {
+            feat(0, feat_index) = *(ft_it->begin()+step_count);
+          }
+        }
+        // get the rf probability prediction values
+        double label_pred_0 = 0.0;
+        double label_pred_1 = 0.0;
+        for (vector<RandomForest<unsigned> >::iterator rf_it = rfs.begin(); rf_it != rfs.end(); ++rf_it) {
+          rf_it->predictProbabilities(feat, res_ar);
+          label_pred_0 += res_ar(0,0);
+          label_pred_1 += res_ar(0,1);
+        }
+        if (label_pred_1 > label_pred_0) {
+          *label_it = 1;
         } else {
-	  *label_it = 0;
+          *label_it = 0;
         }
       }
 
@@ -231,58 +231,66 @@ int main(int argc, char** argv) {
       if (options.count("border") > 0) {
         ignore_border_cc<2>(label_image, options["border"]);
       }
-      // cout << "Detected " << n_regions << " connected components\n";
+      // save the segmentation results
       stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str + "_RES/" + "mask" + zero_padding(timestep, 2) + ".tif";
+      // TODO why is the following line commented?
       // exportImage(srcImageRange<unsigned, StandardConstAccessor<short> >(label_image), ImageExportInfo(segmentation_result_path.str().c_str())); // .setPixelType("INT16"));
-      
-
 
       // calculate features and build TraxelStore
-      chain accu_chain;
+      chain accu_chain; // TODO what does the accu_chain do?
+      // TODO comment code from this line on
       std::vector<unsigned> filtered_labels_at_0;
       Iterator start = createCoupledIterator(label_image, label_image);
       Iterator end = start.getEndIterator();
       extractFeatures(start, end, accu_chain);
       int count_true_object = 1;
       for (int i = 1; i <= n_regions; ++i) {
-         float size = get<Count>(accu_chain, i);
-         if ((options.count("size_from") > 0 && size < options["size_from"]) || (options.count("size_to") > 0 && size > options["size_to"])) {
-           if (timestep == 0) {
+        float size = get<Count>(accu_chain, i);
+        if ((options.count("size_from") > 0 && size < options["size_from"]) || (options.count("size_to") > 0 && size > options["size_to"])) {
+          if (timestep == 0) {
             filtered_labels_at_0.push_back(i);
             set_pixels_of_cc_to_value<2>(label_image, i, 0);
-           }
-           continue;
-         }
-         if (timestep == 0) {
-           set_pixels_of_cc_to_value<2>(label_image, i, count_true_object);
-           vector<float> com(get<Coord<Mean> >(accu_chain, count_true_object).begin(), get<Coord<Mean> >(accu_chain, count_true_object).end());
-           if (com.size() == 2)
+          }
+          continue;
+        }
+        if (timestep == 0) {
+          set_pixels_of_cc_to_value<2>(label_image, i, count_true_object);
+          vector<float> com(get<Coord<Mean> >(accu_chain, count_true_object).begin(), get<Coord<Mean> >(accu_chain, count_true_object).end());
+          if (com.size() == 2) {
             com.push_back(0);
-           pgmlink::FeatureMap f_map;
-           f_map["com"] = com;
-           f_map["count"].push_back(size);
-           pgmlink::Traxel trax(count_true_object, timestep, f_map);
-           pgmlink::add(ts, trax);
-           ++count_true_object;
-         }
-         else {
-           vector<float> com(get<Coord<Mean> >(accu_chain, i).begin(), get<Coord<Mean> >(accu_chain, i).end());
-           if (com.size() == 2)
+          }
+          pgmlink::FeatureMap f_map;
+          f_map["com"] = com;
+          f_map["count"].push_back(size);
+          pgmlink::Traxel trax(count_true_object, timestep, f_map);
+          pgmlink::add(ts, trax);
+          ++count_true_object;
+        }
+        else {
+          vector<float> com(get<Coord<Mean> >(accu_chain, i).begin(), get<Coord<Mean> >(accu_chain, i).end());
+          if (com.size() == 2) {
             com.push_back(0);
-           pgmlink::FeatureMap f_map;
-           f_map["com"] = com;
-           f_map["count"].push_back(size);
-           pgmlink::Traxel trax(i, timestep, f_map);
-           pgmlink::add(ts, trax);
-         }
-         
+          }
+          pgmlink::FeatureMap f_map;
+          f_map["com"] = com;
+          f_map["count"].push_back(size);
+          pgmlink::Traxel trax(i, timestep, f_map);
+          pgmlink::add(ts, trax);
+        }
       }
       exportImage(srcImageRange(vigra::MultiArray<2, unsigned short>(label_image)), ImageExportInfo(segmentation_result_path.str().c_str()));
     }
+    // end of iteration over all filenames/timesteps
 
-
+    //=========================================================================
+    // track!
+    //=========================================================================
     vector<vector<pgmlink::Event> > events = track(ts, options);
+
+    //=========================================================================
+    // handle results
+    //=========================================================================
     vector<vector<pgmlink::Event> >::const_iterator EV_IT = events.begin();
     for(; EV_IT != events.end(); ++EV_IT) {
       for (vector<pgmlink::Event>::const_iterator ev = EV_IT->begin(); ev != EV_IT->end(); ++ev) {
@@ -292,12 +300,10 @@ int main(int argc, char** argv) {
     }
     vector<Lineage> lineage_vec;
 
-
     vector<fs::path> res_fn_vec;
     copy_if_own(fs::directory_iterator(res_dir), fs::directory_iterator(), back_inserter(res_fn_vec), tif_chooser);
     sort(res_fn_vec.begin(), res_fn_vec.end());
     cout << res_fn_vec[0].string() << "\n";
-
 
     ImageImportInfo info_general(res_fn_vec[0].string().c_str());
     MultiArrayShape<2>::type shape_general(info_general.shape());
@@ -305,18 +311,15 @@ int main(int argc, char** argv) {
     importImage(info_general, destImage(base_img));
     int max_l_id = initialize_lineages<2>(lineage_vec, base_img);
 
-    transform_events<2>(events,
-                        ++res_fn_vec.begin(),
-                        res_fn_vec.end(),
-                        lineage_vec,
-                        shape_general,
-                        max_l_id,
-                        1);
-
+    transform_events<2>(
+      events,
+      ++res_fn_vec.begin(),
+      res_fn_vec.end(),
+      lineage_vec,
+      shape_general,
+      max_l_id,
+      1);
     write_lineages(lineage_vec, res_dir_str + "/res_track.txt");
-
-    
-
 
     // base_img = MultiArray<2, unsigned>();
 
@@ -324,28 +327,20 @@ int main(int argc, char** argv) {
     for (vector<Lineage>::iterator lm_it = lineage_vec.begin(); lm_it != lineage_vec.end(); ++lm_it) {
       cout << *lm_it << "\n";
 
-      }*/ 
-    
-    
+      }*/
 
     /* vigra::MultiArray<2, unsigned> relabelll(shape_general);
     relabelll *= 0;
     cout << find_lineage_by_o_id(lineage_vec, 2) << "\n";
     relabel_image<2>(base_img, relabelll, 2, 50);
     exportImage(srcImageRange(relabelll), ImageExportInfo("relabel.tif")); */
-    
-    					
 
     return 0;
-  }
-  
-  catch (ArgumentError& e) {
+  } catch (ArgumentError& e) {
     cout << e.what();
     cout << "Usage: " << argv[0] << " folder sequence config_path rf_path feature_path" << endl;
     return 0;
-  }
-  
-  catch (runtime_error& e) {
+  } catch (runtime_error& e) {
     cout << "Program crashed:\n";
     cout << e.what();
     return 0;
