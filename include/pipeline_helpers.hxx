@@ -38,7 +38,7 @@
 typedef float FEATURETYPE;
 typedef vigra::MultiArray<3, FEATURETYPE> feature_image;
 typedef vigra::CoupledIteratorType<2, unsigned, unsigned>::type label_img_iterator;
-typedef std::vector<unsigned> event_array;
+typedef std::vector<long unsigned> event_array;
 
 
 // ArgumentError class

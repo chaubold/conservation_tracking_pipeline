@@ -45,7 +45,7 @@ using namespace vigra::acc;
 namespace fs = boost::filesystem;
 
 typedef FEATURETYPE DATATYPE;
-typedef vigra::CoupledIteratorType<2, unsigned, unsigned>::type Iterator;
+typedef vigra::CoupledIteratorType<3, unsigned, unsigned>::type Iterator;
 typedef Iterator::value_type Handle;
 typedef AccumulatorChainArray<Handle,
 				   Select<DataArg<1>, LabelArg<2>,
@@ -233,15 +233,14 @@ int main(int argc, char** argv) {
 
       // extract objects
       MultiArray<3, unsigned> label_image(shape);
-      // int n_regions = labelVolumeWithBackground(srcMultiArrayRange(labels), destMultiArray(label_image), NeighborCode3DSix(), 0);
-       labelVolumeWithBackground(srcMultiArrayRange(labels), destMultiArray(label_image), NeighborCode3DSix(), 0);
+      int n_regions = labelVolumeWithBackground(srcMultiArrayRange(labels), destMultiArray(label_image), NeighborCode3DSix(), 0);
       if (options.count("border") > 0) {
         ignore_border_cc<3>(label_image, options["border"]);
       }
       // cout << "Detected " << n_regions << " connected components\n";
       stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str + "_RES/" + "mask" + zero_padding(timestep, 2) + ".tif";
-    }
+//    }
       // exportImage(srcImageRange<unsigned, StandardConstAccessor<short> >(label_image), ImageExportInfo(segmentation_result_path.str().c_str())); // .setPixelType("INT16"));
       // exportImage(srcImageRange(vigra::MultiArray<2, short>(label_image.bindAt(2, 0))), ImageExportInfo(segmentation_result_path.str().c_str()));
 
