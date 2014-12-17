@@ -106,7 +106,7 @@ int read_features_from_file(std::string path, std::vector<std::pair<std::string,
   return 0;
 }
 
-/** @brief Read a csv table into a vector of string-double pairs.
+/** @brief Read a csv table into a map from string to double.
  */
 int read_config_from_file(const std::string& path, std::map<std::string, double>& options) {
   std::ifstream f(path.c_str());

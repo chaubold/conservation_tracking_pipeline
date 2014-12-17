@@ -44,7 +44,7 @@ using namespace vigra;
 using namespace vigra::acc;
 namespace fs = boost::filesystem;
 
-typedef FEATURETYPE DATATYPE;
+typedef FeatureType DATATYPE;
 typedef vigra::CoupledIteratorType<3, unsigned, unsigned>::type Iterator;
 typedef Iterator::value_type Handle;
 typedef AccumulatorChainArray<Handle,
@@ -165,11 +165,11 @@ int main(int argc, char** argv) {
 
       // calculate features
       vector<pair<string, string> >::iterator it = feature_list.begin();
-      vector<vector<MultiArray<3, FEATURETYPE> > > features;
+      vector<vector<MultiArray<3, FeatureType> > > features;
       int feature_dim = 0;
       for (; it != feature_list.end(); ++it) {
 	feature_dim += feature_dim_lookup_size(it->first);
-	features.push_back(vector<MultiArray<3, FEATURETYPE> >());
+	features.push_back(vector<MultiArray<3, FeatureType> >());
 	double scale = string_to_double(it->second);
 	double presmooth_sigma = 1.0;
 	if (scale <= 1.0 || !presmoothing) {
@@ -206,14 +206,14 @@ int main(int argc, char** argv) {
 
 
       
-      MultiArray<2, FEATURETYPE> feat(Shape2(1, feature_dim));
-      MultiArray<2, FEATURETYPE> res_ar(Shape2(1, 2));
+      MultiArray<2, FeatureType> feat(Shape2(1, feature_dim));
+      MultiArray<2, FeatureType> res_ar(Shape2(1, 2));
       MultiArray<3, unsigned>::iterator label_it = labels.begin();
       unsigned step_count(0);
       for (; label_it != labels.end(); ++label_it, ++step_count) {
 	int feat_index = 0;
-	for (vector<vector<MultiArray<3, FEATURETYPE> > >::iterator ft_vec_it = features.begin(); ft_vec_it != features.end(); ++ft_vec_it) {
-	  for (vector<MultiArray<3, FEATURETYPE> >::iterator ft_it = ft_vec_it->begin(); ft_it != ft_vec_it->end(); ++ft_it, ++feat_index) {
+	for (vector<vector<MultiArray<3, FeatureType> > >::iterator ft_vec_it = features.begin(); ft_vec_it != features.end(); ++ft_vec_it) {
+	  for (vector<MultiArray<3, FeatureType> >::iterator ft_it = ft_vec_it->begin(); ft_it != ft_vec_it->end(); ++ft_it, ++feat_index) {
 	    feat(0, feat_index) = *(ft_it->begin()+step_count);
 	  }
 	}

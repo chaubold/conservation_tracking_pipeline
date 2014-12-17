@@ -35,8 +35,8 @@
 
 
 
-typedef float FEATURETYPE;
-typedef vigra::MultiArray<3, FEATURETYPE> feature_image;
+typedef float FeatureType;
+typedef vigra::MultiArray<3, FeatureType> feature_image;
 typedef vigra::CoupledIteratorType<2, unsigned, unsigned>::type label_img_iterator;
 typedef std::vector<long unsigned> event_array;
 
@@ -136,22 +136,22 @@ void ignore_border_cc(vigra::MultiArrayView<N, unsigned> image, unsigned border_
 
 // ilastik pixelclassification style difference of gaussians
 template <int N>
-void differenceOfGaussians(const vigra::MultiArray<N, FEATURETYPE>& src, vigra::MultiArray<N, FEATURETYPE>& dest, double scale0, double scale1, vigra::ConvolutionOptions<N> opt);
+void differenceOfGaussians(const vigra::MultiArray<N, FeatureType>& src, vigra::MultiArray<N, FeatureType>& dest, double scale0, double scale1, vigra::ConvolutionOptions<N> opt);
 
 
 // gaussianGradientMagnitude for MultiArrays
 template <int N>
-void gaussianGradientMagnitudeOwn(const vigra::MultiArray<N, FEATURETYPE>& src, vigra::MultiArray<N, FEATURETYPE>& dest, double scale, vigra::ConvolutionOptions<N> opt);
+void gaussianGradientMagnitudeOwn(const vigra::MultiArray<N, FeatureType>& src, vigra::MultiArray<N, FeatureType>& dest, double scale, vigra::ConvolutionOptions<N> opt);
 
 
 // structureTensorEigenvalues for vector<MultiArray> instead of MultiArray<N, TinyVector>
 template <int N>
-void structureTensorEigenValuesOwn(const vigra::MultiArray<N, FEATURETYPE>& src, std::vector<vigra::MultiArray<N, FEATURETYPE> >& dest, double inner_scale, double outer_scale, vigra::ConvolutionOptions<N> opt);
+void structureTensorEigenValuesOwn(const vigra::MultiArray<N, FeatureType>& src, std::vector<vigra::MultiArray<N, FeatureType> >& dest, double inner_scale, double outer_scale, vigra::ConvolutionOptions<N> opt);
 
 
 // hessianOfGaussianEigenvalues for vector<MultiArray> instead of MultiArray<N, TinyVector>
 template <int N>
-void hessianOfGaussianEigenvaluesOwn(const vigra::MultiArray<N, FEATURETYPE>& src, std::vector<vigra::MultiArray<N, FEATURETYPE> >& dest, double scale, vigra::ConvolutionOptions<N> opt);
+void hessianOfGaussianEigenvaluesOwn(const vigra::MultiArray<N, FeatureType>& src, std::vector<vigra::MultiArray<N, FeatureType> >& dest, double scale, vigra::ConvolutionOptions<N> opt);
 
 
 // MultiArray<N, TinyVector<T, U> > to vector<MultiArray<N, T> >
@@ -162,12 +162,12 @@ void multi_array_of_tiny_vec_to_vec_of_multi_array(const vigra::MultiArray<N, vi
 
 // get features from string storing in vector of MultiArrays
 template <int N>
-int get_features(const vigra::MultiArray<N, FEATURETYPE>& src, std::vector<vigra::MultiArray<N, FEATURETYPE> >& dest, std::string feature, double scale, double window_size = 2.0);
+int get_features(const vigra::MultiArray<N, FeatureType>& src, std::vector<vigra::MultiArray<N, FeatureType> >& dest, std::string feature, double scale, double window_size = 2.0);
 
 
 // get features from string storing in MultiArray with Dim+1
 template <int N>
-int get_features(const vigra::MultiArray<N, FEATURETYPE>& src, vigra::MultiArrayView<N+1, FEATURETYPE> dest, std::string feature, double scale, int pos_in_res_array, double window_size = 2.0);
+int get_features(const vigra::MultiArray<N, FeatureType>& src, vigra::MultiArrayView<N+1, FeatureType> dest, std::string feature, double scale, int pos_in_res_array, double window_size = 2.0);
 
 
 // extract number from string
@@ -188,6 +188,7 @@ std::vector<std::vector<pgmlink::Event> > track(pgmlink::TraxelStore& ts, std::m
 
 
 // find lineage by object id
+// Returns max index + 1 if not in array -> TODO enforces array out of index errors
 int find_lineage_by_o_id(const std::vector<Lineage>& lineage_vec, int o_id);
 
 
@@ -358,8 +359,8 @@ void ignore_border_cc(vigra::MultiArrayView<N, unsigned> image, unsigned border_
 
 
 template <int N>
-void differenceOfGaussians(const vigra::MultiArray<N, FEATURETYPE>& src, vigra::MultiArray<N, FEATURETYPE>& dest, double scale0, double scale1, vigra::ConvolutionOptions<N> opt) {
-  vigra::MultiArray<N, FEATURETYPE> tmp(src.shape());
+void differenceOfGaussians(const vigra::MultiArray<N, FeatureType>& src, vigra::MultiArray<N, FeatureType>& dest, double scale0, double scale1, vigra::ConvolutionOptions<N> opt) {
+  vigra::MultiArray<N, FeatureType> tmp(src.shape());
   vigra::gaussianSmoothMultiArray(srcMultiArrayRange(src), destMultiArray(dest), scale0, opt);
   vigra::gaussianSmoothMultiArray(srcMultiArrayRange(src), destMultiArray(tmp), scale1, opt);
   dest -= tmp;
@@ -367,8 +368,8 @@ void differenceOfGaussians(const vigra::MultiArray<N, FEATURETYPE>& src, vigra::
 
 
 template <int N>
-void gaussianGradientMagnitudeOwn(const vigra::MultiArray<N, FEATURETYPE>& src, vigra::MultiArray<N, FEATURETYPE>& dest, double scale, vigra::ConvolutionOptions<N> opt) {
-  vigra::MultiArray<N, vigra::TinyVector<FEATURETYPE, N> > tmp(src.shape());
+void gaussianGradientMagnitudeOwn(const vigra::MultiArray<N, FeatureType>& src, vigra::MultiArray<N, FeatureType>& dest, double scale, vigra::ConvolutionOptions<N> opt) {
+  vigra::MultiArray<N, vigra::TinyVector<FeatureType, N> > tmp(src.shape());
   vigra::gaussianGradientMultiArray(srcMultiArrayRange(src), destMultiArray(tmp), scale, opt);
   if (N == 2)
     vigra::combineTwoMultiArrays(srcMultiArrayRange(tmp),
@@ -385,22 +386,22 @@ void gaussianGradientMagnitudeOwn(const vigra::MultiArray<N, FEATURETYPE>& src, 
 
 
 template <int N>
-void structureTensorEigenvaluesOwn(const vigra::MultiArray<N, FEATURETYPE>& src, std::vector<vigra::MultiArray<N, FEATURETYPE> >& dest, double inner_scale, double outer_scale, vigra::ConvolutionOptions<N> opt) {
-  vigra::MultiArray<N, vigra::TinyVector<FEATURETYPE, (N*(N+1))/2> > tmp1(src.shape());
-  vigra::MultiArray<N, vigra::TinyVector<FEATURETYPE, N> > tmp2(src.shape());
+void structureTensorEigenvaluesOwn(const vigra::MultiArray<N, FeatureType>& src, std::vector<vigra::MultiArray<N, FeatureType> >& dest, double inner_scale, double outer_scale, vigra::ConvolutionOptions<N> opt) {
+  vigra::MultiArray<N, vigra::TinyVector<FeatureType, (N*(N+1))/2> > tmp1(src.shape());
+  vigra::MultiArray<N, vigra::TinyVector<FeatureType, N> > tmp2(src.shape());
   vigra::structureTensorMultiArray(srcMultiArrayRange(src), destMultiArray(tmp1), inner_scale, outer_scale, opt);
   vigra::tensorEigenvaluesMultiArray(srcMultiArrayRange(tmp1), destMultiArray(tmp2));
-  multi_array_of_tiny_vec_to_vec_of_multi_array<N, FEATURETYPE, N>(tmp2, dest);
+  multi_array_of_tiny_vec_to_vec_of_multi_array<N, FeatureType, N>(tmp2, dest);
 }
 
 
 template <int N>
-void hessianOfGaussianEigenvaluesOwn(const vigra::MultiArray<N, FEATURETYPE>& src, std::vector<vigra::MultiArray<N, FEATURETYPE> >& dest, double scale, vigra::ConvolutionOptions<N> opt) {
-  vigra::MultiArray<N, vigra::TinyVector<FEATURETYPE, (N*(N+1))/2> > tmp1(src.shape());
-  vigra::MultiArray<N, vigra::TinyVector<FEATURETYPE, N> > tmp2(src.shape());
+void hessianOfGaussianEigenvaluesOwn(const vigra::MultiArray<N, FeatureType>& src, std::vector<vigra::MultiArray<N, FeatureType> >& dest, double scale, vigra::ConvolutionOptions<N> opt) {
+  vigra::MultiArray<N, vigra::TinyVector<FeatureType, (N*(N+1))/2> > tmp1(src.shape());
+  vigra::MultiArray<N, vigra::TinyVector<FeatureType, N> > tmp2(src.shape());
   vigra::hessianOfGaussianMultiArray(srcMultiArrayRange(src), destMultiArray(tmp1), scale, opt);
   vigra::tensorEigenvaluesMultiArray(srcMultiArrayRange(tmp1), destMultiArray(tmp2));
-  multi_array_of_tiny_vec_to_vec_of_multi_array<N, FEATURETYPE, N>(tmp2, dest);
+  multi_array_of_tiny_vec_to_vec_of_multi_array<N, FeatureType, N>(tmp2, dest);
 }
 
 
@@ -416,25 +417,25 @@ void multi_array_of_tiny_vec_to_vec_of_multi_array(const vigra::MultiArray<N, vi
 
 
 template <int N>
-int get_features(const vigra::MultiArray<N, FEATURETYPE>& src, std::vector<vigra::MultiArray<N, FEATURETYPE> >& dest, std::string feature, double scale, double window_size) {
+int get_features(const vigra::MultiArray<N, FeatureType>& src, std::vector<vigra::MultiArray<N, FeatureType> >& dest, std::string feature, double scale, double window_size) {
   if (dest.size()) return 2;
   vigra::ConvolutionOptions<N> opt;
   opt.filterWindowSize(window_size);
   if (!feature.compare("GaussianSmoothing")) {
-    dest.push_back(vigra::MultiArray<N, FEATURETYPE>(src.shape()));
+    dest.push_back(vigra::MultiArray<N, FeatureType>(src.shape()));
     vigra::gaussianSmoothMultiArray(srcMultiArrayRange(src), destMultiArray(dest[0]), scale, opt);
   } else if (!feature.compare("LaplacianOfGaussians")) {
-    dest.push_back(vigra::MultiArray<N, FEATURETYPE>(src.shape()));
+    dest.push_back(vigra::MultiArray<N, FeatureType>(src.shape()));
     vigra::laplacianOfGaussianMultiArray(srcMultiArrayRange(src), destMultiArray(dest[0]), scale, opt);
   } else if (!feature.compare("StructureTensorEigenvalues")) {
     structureTensorEigenvaluesOwn<N>(src, dest, scale, 0.5*scale, opt);
   } else if (!feature.compare("HessianOfGaussianEigenvalues")) {
     hessianOfGaussianEigenvaluesOwn<N>(src, dest, scale, opt);
   } else if (!feature.compare("GaussianGradientMagnitude")) {
-    dest.push_back(vigra::MultiArray<N, FEATURETYPE>(src.shape()));
+    dest.push_back(vigra::MultiArray<N, FeatureType>(src.shape()));
     gaussianGradientMagnitudeOwn<N>(src, dest[0], scale, opt);
   } else if (!feature.compare("DifferenceOfGaussians")) {
-    dest.push_back(vigra::MultiArray<N, FEATURETYPE>(src.shape()));
+    dest.push_back(vigra::MultiArray<N, FeatureType>(src.shape()));
     differenceOfGaussians<N>(src, dest[0], scale, 0.66*scale, opt);
   } else return 1;
   return 0;			     
@@ -442,7 +443,7 @@ int get_features(const vigra::MultiArray<N, FEATURETYPE>& src, std::vector<vigra
 
 
 template <int N>
-int get_features(const vigra::MultiArray<N, FEATURETYPE>& src, vigra::MultiArrayView<N+1, FEATURETYPE>& dest, std::string feature, double scale, double window_size) {
+int get_features(const vigra::MultiArray<N, FeatureType>& src, vigra::MultiArrayView<N+1, FeatureType>& dest, std::string feature, double scale, double window_size) {
   vigra::ConvolutionOptions<N> opt;
   opt.filterWindowSize(window_size);
   if (feature.compare("GaussianSmoothing") == 0) {
