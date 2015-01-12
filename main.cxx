@@ -142,7 +142,6 @@ int main(int argc, char** argv) {
     // run segmentation for all tif files in the given folder
     // write results to <dataset_folder>/<dataset_sequence_segmentation>
 
-    std::vector<UIntMatrixType> label_images;
     int timestep = 0;
     pgmlink::TraxelStore ts;
     // sort filenames
