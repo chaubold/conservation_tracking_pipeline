@@ -98,7 +98,7 @@ std::string zero_padding(int num, int n_zeros);
 
 
 // read features from csv_style file
-int read_features_from_file(std::string path, std::vector<std::pair<std::string, std::string> >& features);
+int read_features_from_file(std::string path, std::vector<std::pair<std::string, double> >& features);
 
 
 // lookup the size of given feature

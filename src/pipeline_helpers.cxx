@@ -91,7 +91,7 @@ std::string zero_padding(int num, int n_zeros) {
 
 /** @brief Read a csv table into a vector of string pairs.
  */
-int read_features_from_file(std::string path, std::vector<std::pair<std::string, std::string> >& features) {
+int read_features_from_file(std::string path, std::vector<std::pair<std::string, double> >& features) {
   std::ifstream f(path.c_str());
   if (!f.is_open()) {
     return 1;
@@ -100,7 +100,8 @@ int read_features_from_file(std::string path, std::vector<std::pair<std::string,
   std::string line;
   while(getline(f, line)) {
     Tokenizer tok(line);
-    features.push_back(std::make_pair(*tok.begin(), *(++tok.begin())));
+    features.push_back(
+      std::make_pair(*tok.begin(), string_to_double(*(++tok.begin()))));
   }
   f.close();
   return 0;

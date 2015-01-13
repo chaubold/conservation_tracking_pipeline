@@ -83,23 +83,23 @@ int FeatureCalculator<N>::calculate_laplacian_of_gaussians(
   return 0;
 }
 
-template<>
-int FeatureCalculator<2>::calculate_gaussian_gradient_magnitude(
-  const vigra::MultiArrayView<2, DataType>& image,
-  vigra::MultiArrayView<3, DataType>& features,
+template<int N>
+int FeatureCalculator<N>::calculate_gaussian_gradient_magnitude(
+  const vigra::MultiArrayView<N, DataType>& image,
+  vigra::MultiArrayView<N+1, DataType>& features,
   double feature_scale) const
 {
-  vigra::MultiArrayView<2, DataType> results(features.bindAt(2, 0));
-  vigra::MultiArray<2, vigra::TinyVector<DataType, 2> > temp(image.shape());
+  vigra::MultiArrayView<N, DataType> results(features.bindAt(2, 0));
+  vigra::MultiArray<N, vigra::TinyVector<DataType, N> > temp(image.shape());
   vigra::gaussianGradientMultiArray(
     srcMultiArrayRange(image),
     destMultiArray(temp),
     feature_scale,
     conv_options_);
-  vigra::VectorNormSqFunctor<vigra::TinyVector<DataType, 2> > sq_norm;
-  vigra::transformImage(
-    srcImageRange(temp),
-    destImage(results),
+  vigra::VectorNormSqFunctor<vigra::TinyVector<DataType, N> > sq_norm;
+  vigra::transformMultiArray(
+    srcMultiArrayRange(temp),
+    destMultiArray(results),
     sq_norm);
   return 0;
 }
@@ -261,29 +261,17 @@ int FeatureCalculator<3>::calculate(
 template class FeatureCalculator<2>;
 
 ////
-//// struct Segmentation 
+//// struct Segmentation
 ////
 template<int N>
-Segmentation<N>::Segmentation(
-    vigra::MultiArray<N, unsigned>& segmentation_image,
-    vigra::MultiArray<N, unsigned>& label_image,
-    size_t label_count) :
-  segmentation_image_(segmentation_image),
-  label_image_(label_image),
-  label_count_(label_count)
-{
-  // nop
-}
-
-template<int N>
-void Segmentation<N>::initialize(vigra::MultiArray<N, DataType>& image) {
+void Segmentation<N>::initialize(const vigra::MultiArray<N, DataType>& image) {
   segmentation_image_.reshape(image.shape());
   label_image_.reshape(image.shape());
 }
 
 // explicit instantiation
+// TODO for dim = 3 as well
 template class Segmentation<2>;
-template class Segmentation<3>;
 
 ////
 //// class SegmentationCalculator
@@ -324,7 +312,7 @@ int SegmentationCalculator<N>::calculate(
     it != random_forests_.end();
     it++
   ) {
-    it->predictProbabilities(features, label_probabilities_temp);
+    it->predictProbabilities(reshaped_features, label_probabilities_temp);
     label_probabilities += label_probabilities_temp;
   }
   // assign the labels
@@ -355,7 +343,7 @@ int SegmentationCalculator<N>::calculate(
 template<>
 int SegmentationCalculator<2>::reshape_features(
   const vigra::MultiArray<3, DataType>& features,
-  vigra::MultiArray<2, DataType>& features_reshaped)
+  vigra::MultiArray<2, DataType>& features_reshaped) const
 {
   size_t size_0 = features.size(0);
   size_t size_1 = features.size(1);
@@ -376,7 +364,7 @@ int SegmentationCalculator<2>::reshape_features(
 template<>
 int SegmentationCalculator<3>::reshape_features(
   const vigra::MultiArray<4, DataType>& features,
-  vigra::MultiArray<2, DataType>& features_reshaped)
+  vigra::MultiArray<2, DataType>& features_reshaped) const
 {
   size_t size_0 = features.size(0);
   size_t size_1 = features.size(1);
@@ -400,5 +388,9 @@ int SegmentationCalculator<3>::reshape_features(
   }
   return 0;
 }
+
+// explicit instantiation
+// TODO for dim = 3 as well
+template class SegmentationCalculator<2>;
 
 } // namespace isbi_pipeline

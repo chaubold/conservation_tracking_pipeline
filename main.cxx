@@ -34,6 +34,7 @@
 
 // own
 #include "pipeline_helpers.hxx"
+#include "segmentation.hxx"
 
 
 // Aliases for convenience
@@ -46,7 +47,7 @@ namespace fs = boost::filesystem;
 // Scalar types
 typedef FeatureType DataType;
 // Container types of the standard library
-typedef std::vector<std::pair<std::string, std::string> > StringPairVectorType;
+typedef std::vector<std::pair<std::string, double> > StringDoublePairVectorType;
 typedef std::map<std::string, double> StringDoubleMapType;
 // Vigra MultiArray types
 typedef vigra::MultiArray<2, DataType> DataMatrixType;
@@ -78,7 +79,8 @@ int main(int argc, char** argv) {
     if (argc < 6) {
       throw ArgumentError();
     }
-    bool presmoothing = true;
+    // TODO what about presmoothing?
+    // bool presmoothing = true;
 
     // dataset variables
     rstrip(argv[1], '/');
@@ -152,6 +154,10 @@ int main(int argc, char** argv) {
       back_inserter(fn_vec),
       tif_chooser);
     std::sort(fn_vec.begin(), fn_vec.end());
+    // create the feature and segmentation calculator
+    boost::shared_ptr<isbi_pipeline::FeatureCalculator<2> > feature_calc_ptr(
+      new isbi_pipeline::FeatureCalculator<2>(feature_list));
+    isbi_pipeline::SegmentationCalculator<2> seg_calc(feature_calc_ptr, rfs);
 
     // iterate over the filenames
     for (
@@ -173,125 +179,12 @@ int main(int argc, char** argv) {
       vigra::Shape2 shape(info.width(), info.height());
       // initialize some multi arrays
       DataMatrixType src_unsmoothed(shape);
-      DataMatrixType src(shape);
-      UIntMatrixType labels(shape);
       // read the image pixel data
       vigra::importImage(info, vigra::destImage(src_unsmoothed));
-
-      // calculate features
-      int feature_dim = 0;
-      FeatureStorageType features; // type is vec<vec<Matrix> >
-      for (
-        StringPairVectorType::iterator it = feature_list.begin();
-        it != feature_list.end();
-        ++it)
-      {
-        feature_dim += feature_dim_lookup_size(it->first);
-        features.push_back(std::vector<FeatureMatrixType>());
-        double scale = string_to_double(it->second);
-        double presmooth_sigma = 1.0;
-        if (scale <= 1.0 || !presmoothing) {
-          presmooth_sigma = scale;
-        } else {
-          presmooth_sigma = std::sqrt(
-            scale*scale - presmooth_sigma*presmooth_sigma);
-        }
-
-        // gaussian presmoothing of the image
-        vigra::ConvolutionOptions<2> opt;
-        opt.filterWindowSize(3.5); // TODO hard coded value
-        if (presmoothing) {
-          vigra::gaussianSmoothMultiArray(
-            vigra::srcMultiArrayRange(src_unsmoothed),
-            vigra::destMultiArray(src),
-            presmooth_sigma,
-            opt);
-        } else {
-          src = src_unsmoothed;
-        }
-
-        // TODO hard coded values in the following
-        double feature_sigma = 1.0;
-        double window_size = 2.0;
-        if (scale <= 1.0 || !presmoothing) {
-          feature_sigma = scale;
-        }
-        if (!presmoothing) {
-          window_size = 3.5;
-        }
-
-        // Calculate the features
-        std::cout << "  Calculating feature " << it->first
-          << " (s=" << it->second << "," << feature_sigma << ")\n";
-        int feature_status = get_features<2>(
-          src,
-          features[features.size()-1],
-          it->first,
-          feature_sigma,
-          window_size);
-        // raise an error if the feature status is 1 or 2
-        if (feature_status == 1) {
-          throw std::runtime_error(
-            "get_features not implemented for feature " + it->first);
-        } else if (feature_status == 2) {
-          throw std::runtime_error(
-            "vector passed to get_features is not a zero-length vector");
-        }
-      }
-
-      // initialize some variables outside the loop over all pixels
-      // feat(1, feature_dim): feature vector for one pixel
-      // res_ar(1, 2): classification results of random forests
-      FeatureMatrixType feat(vigra::Shape2(1, feature_dim));
-      FeatureMatrixType res_ar(vigra::Shape2(1, 2));
-      unsigned step_count = 0;
-      UIntMatrixType::iterator label_it = labels.begin();
-      // TODO Have a closer look at the following code
-      // iterate over all labels and get the segmentation classification
-      for (; label_it != labels.end(); ++label_it, ++step_count) {
-        // write all features into a feature vector
-        int feat_index = 0;
-        for (
-          FeatureStorageType::iterator ft_vec_it = features.begin();
-          ft_vec_it != features.end();
-          ++ft_vec_it)
-        {
-          for (
-            std::vector<FeatureMatrixType>::iterator ft_it = ft_vec_it->begin();
-            ft_it != ft_vec_it->end();
-            ++ft_it, ++feat_index
-          ) {
-            feat(0, feat_index) = *(ft_it->begin()+step_count);
-          }
-        }
-        // get the rf probability prediction values
-        double label_pred_0 = 0.0;
-        double label_pred_1 = 0.0;
-        for (
-          std::vector<RandomForestType>::iterator rf_it = rfs.begin();
-          rf_it != rfs.end();
-          ++rf_it)
-        {
-          rf_it->predictProbabilities(feat, res_ar);
-          label_pred_0 += res_ar(0,0);
-          label_pred_1 += res_ar(0,1);
-        }
-        if (label_pred_1 > label_pred_0) {
-          *label_it = 1;
-        } else {
-          *label_it = 0;
-        }
-      }
-
-      // extract objects
-      UIntMatrixType label_image(shape);
-      int n_regions = vigra::labelImageWithBackground(
-        vigra::srcImageRange(labels),
-        vigra::destImage(label_image),
-        1,
-        0);
+      isbi_pipeline::Segmentation<2> segmentation;
+      seg_calc.calculate(src_unsmoothed, segmentation);
       if (options.count("border") > 0) {
-        ignore_border_cc<2>(label_image, options["border"]);
+        ignore_border_cc<2>(segmentation.label_image_, options["border"]);
       }
       // save the segmentation results
       std::stringstream segmentation_result_path;
@@ -310,15 +203,15 @@ int main(int argc, char** argv) {
       // Remove?
       std::vector<unsigned> filtered_labels_at_0;
       CoupledIteratorType start = vigra::createCoupledIterator(
-        label_image,
-        label_image);
+        segmentation.label_image_,
+        segmentation.label_image_);
       CoupledIteratorType end = start.getEndIterator();
       // calculate the size and coordinate center of mass
       acc::extractFeatures(start, end, accu_chain);
       // variable for relabeling the filtered objects for t == 0
       int count_true_object = 1;
       // loop over all objects
-      for (int i = 1; i <= n_regions; ++i) {
+      for (size_t i = 1; i <= segmentation.label_count_; ++i) {
         // get the object size
         float size = acc::get<acc::Count>(accu_chain, i);
         // check if the object is within the desired size range
@@ -333,7 +226,7 @@ int main(int argc, char** argv) {
         if (!(fits_lower_limit && fits_upper_limit)) {
           if (timestep == 0) {
             filtered_labels_at_0.push_back(i);
-            set_pixels_of_cc_to_value<2>(label_image, i, 0);
+            set_pixels_of_cc_to_value<2>(segmentation.label_image_, i, 0);
           }
           continue;
         }
@@ -341,7 +234,10 @@ int main(int argc, char** argv) {
         // TODO Remove the following if-else statement as well if the filtered
         // label image is removed.
         if (timestep == 0) {
-          set_pixels_of_cc_to_value<2>(label_image, i, count_true_object);
+          set_pixels_of_cc_to_value<2>(
+            segmentation.label_image_,
+            i,
+            count_true_object);
           typedef acc::Coord<acc::Mean> CoordMeanType;
           std::vector<float> com(
             acc::get<CoordMeanType>(accu_chain, count_true_object).begin(),
@@ -379,7 +275,7 @@ int main(int argc, char** argv) {
       typedef vigra::MultiArray<2, unsigned short> UShortMatrixType;
       // save the segmentation
       vigra::exportImage(
-        vigra::srcImageRange(UShortMatrixType(label_image)),
+        vigra::srcImageRange(UShortMatrixType(segmentation.label_image_)),
         vigra::ImageExportInfo(segmentation_result_path.str().c_str()));
     }
     // end of iteration over all filenames/timesteps

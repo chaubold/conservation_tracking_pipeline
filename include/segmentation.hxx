@@ -70,12 +70,7 @@ struct Segmentation {
   vigra::MultiArray<N, unsigned> label_image_;
   size_t label_count_;
   
-  Segmentation(
-    vigra::MultiArray<N, unsigned>& segmentation_image,
-    vigra::MultiArray<N, unsigned>& label_image,
-    size_t label_count = 0);
-  
-  void initialize(vigra::MultiArray<N, DataType>& image);
+  void initialize(const vigra::MultiArray<N, DataType>& image);
 };
 
 template<int N>
@@ -90,7 +85,7 @@ class SegmentationCalculator {
  private:
   int reshape_features(
     const vigra::MultiArray<N+1, DataType>& features,
-    vigra::MultiArray<2, DataType>& features_reshaped);
+    vigra::MultiArray<2, DataType>& features_reshaped) const;
   boost::shared_ptr<FeatureCalculator<N> > feature_calculator_ptr_;
   const std::vector<RandomForestType> random_forests_;
 };

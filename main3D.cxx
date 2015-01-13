@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
 
     // get features used in project
     string feature_list_path = dataset_folder + "/features.txt";
-    vector<pair<string, string> > feature_list;
+    vector<pair<string, double> > feature_list;
     int read_status = read_features_from_file(feature_file_path, feature_list);
     if (read_status == 1) {
       throw runtime_error("Could not open file " + feature_list_path);
@@ -164,13 +164,13 @@ int main(int argc, char** argv) {
 
 
       // calculate features
-      vector<pair<string, string> >::iterator it = feature_list.begin();
+      vector<pair<string, double> >::iterator it = feature_list.begin();
       vector<vector<MultiArray<3, FeatureType> > > features;
       int feature_dim = 0;
       for (; it != feature_list.end(); ++it) {
 	feature_dim += feature_dim_lookup_size(it->first);
 	features.push_back(vector<MultiArray<3, FeatureType> >());
-	double scale = string_to_double(it->second);
+	double scale = it->second;
 	double presmooth_sigma = 1.0;
 	if (scale <= 1.0 || !presmoothing) {
           presmooth_sigma = scale;
