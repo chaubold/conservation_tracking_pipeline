@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
 
     // get features used in project
     std::string feature_list_path = dataset_folder + "/features.txt";
-    StringPairVectorType feature_list;
+    StringDoublePairVectorType feature_list;
     int read_status = read_features_from_file(feature_file_path, feature_list);
     if (read_status == 1) {
       throw std::runtime_error("Could not open file " + feature_list_path);

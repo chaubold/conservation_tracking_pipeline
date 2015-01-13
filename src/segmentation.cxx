@@ -7,94 +7,6 @@
 namespace isbi_pipeline {
 
 ////
-//// struct Segmentation 
-////
-template<int N>
-Segmentation<N>::Segmentation(
-    vigra::MultiArray<N, unsigned>& segmentation_image,
-    vigra::MultiArray<N, unsigned>& label_image,
-    size_t label_count) :
-  segmentation_image_(segmentation_image),
-  label_image_(label_image),
-  label_count_(label_count)
-{
-  // nop
-}
-
-template<int N>
-void Segmentation<N>::initialize(vigra::MultiArray<N, DataType>& image) {
-  segmentation_image_.reshape(image.shape());
-  label_image_.reshape(image.shape());
-}
-
-// explicit instantiation
-template class Segmentation<2>;
-template class Segmentation<3>;
-
-////
-//// class SegmentationCalculator
-////
-template<int N>
-SegmentationCalculator<N>::SegmentationCalculator(
-    boost::shared_ptr<FeatureCalculator<N> > feature_calculator_ptr,
-    const std::vector<RandomForestType>& random_forests) :
-  feature_calculator_ptr_(feature_calculator_ptr),
-  random_forests_(random_forests)
-{
-  // assertions?
-}
-
-template<int N>
-int SegmentationCalculator<N>::calculate(
-  const vigra::MultiArray<N, DataType>& image,
-  Segmentation<N>& segmentation) const
-{
-  int return_status = 0;
-  // initialize the segmentation
-  segmentation.initialize(image);
-  // calculate the features
-  vigra::MultiArray<N+1, DataType>& features;
-  feature_calculator_ptr_->calculate(image, features);
-  // initialize arrays for segmentation
-  vigra::MultiArray<2, DataType> label_probabilities(
-    vigra::Shape2(features.shape(0), 2),
-    0.0);
-  vigra::MultiArray<2, DataType> label_probabilities_temp;
-  label_probabilities_temp.reshape(vigra::Shape2(features.shape(0), 2));
-  // loop over all random forests for prediction probabilities
-  for (
-    std::vector<RandomForestType>::const_iterator it = random_forests_.begin();
-    it != random_forests_.end();
-    it++
-  ) {
-    it->predictProbabilities(features, label_probabilities_temp);
-    label_probabilities += label_probabilities_temp;
-  }
-  // assign the labels
-  typename vigra::MultiArray<N, unsigned>::iterator label_it;
-  label_it = segmentation.label_image_.begin();
-  for (size_t n = 0; n < features.shape(0); n++) {
-    if (label_probabilities(n, 1) > label_probabilities(n, 0)) {
-      *label_it = 1;
-    } else {
-      *label_it = 0;
-    }
-  }
-  // extract objects
-  segmentation.label_count_ = vigra::labelImageWithBackground(
-    vigra::srcImageRange(segmentation.label_image_),
-    vigra::destImage(segmentation.segmentation_image_),
-    1,
-    0);
-  // TODO:
-  // if (options.count("border") > 0) {
-  //   ignore_border_cc<2>(label_image, options["border"]);
-  // }
-  // done
-  return return_status;
-}
-
-////
 //// class FeatureCalculator
 ////
 template<int N>
@@ -347,5 +259,146 @@ int FeatureCalculator<3>::calculate(
 
 // explicit instantiation
 template class FeatureCalculator<2>;
+
+////
+//// struct Segmentation 
+////
+template<int N>
+Segmentation<N>::Segmentation(
+    vigra::MultiArray<N, unsigned>& segmentation_image,
+    vigra::MultiArray<N, unsigned>& label_image,
+    size_t label_count) :
+  segmentation_image_(segmentation_image),
+  label_image_(label_image),
+  label_count_(label_count)
+{
+  // nop
+}
+
+template<int N>
+void Segmentation<N>::initialize(vigra::MultiArray<N, DataType>& image) {
+  segmentation_image_.reshape(image.shape());
+  label_image_.reshape(image.shape());
+}
+
+// explicit instantiation
+template class Segmentation<2>;
+template class Segmentation<3>;
+
+////
+//// class SegmentationCalculator
+////
+template<int N>
+SegmentationCalculator<N>::SegmentationCalculator(
+    boost::shared_ptr<FeatureCalculator<N> > feature_calculator_ptr,
+    const std::vector<RandomForestType>& random_forests) :
+  feature_calculator_ptr_(feature_calculator_ptr),
+  random_forests_(random_forests)
+{
+  // assertions?
+}
+
+template<int N>
+int SegmentationCalculator<N>::calculate(
+  const vigra::MultiArray<N, DataType>& image,
+  Segmentation<N>& segmentation) const
+{
+  int return_status = 0;
+  // initialize the segmentation
+  segmentation.initialize(image);
+  // calculate the features and reshape them
+  vigra::MultiArray<N+1, DataType> features;
+  vigra::MultiArray<2, DataType> reshaped_features;
+  feature_calculator_ptr_->calculate(image, features);
+  reshape_features(features, reshaped_features);
+  // initialize arrays for segmentation
+  vigra::MultiArray<2, DataType> label_probabilities(
+    vigra::Shape2(reshaped_features.shape(0), 2),
+    0.0);
+  vigra::MultiArray<2, DataType> label_probabilities_temp(
+    vigra::Shape2(reshaped_features.shape(0), 2),
+    0.0);
+  // loop over all random forests for prediction probabilities
+  for (
+    std::vector<RandomForestType>::const_iterator it = random_forests_.begin();
+    it != random_forests_.end();
+    it++
+  ) {
+    it->predictProbabilities(features, label_probabilities_temp);
+    label_probabilities += label_probabilities_temp;
+  }
+  // assign the labels
+  typename vigra::MultiArray<N, unsigned>::iterator label_it;
+  label_it = segmentation.label_image_.begin();
+  for (size_t n = 0; n < features.shape(0); n++) {
+    if (label_probabilities(n, 1) > label_probabilities(n, 0)) {
+      *label_it = 1;
+    } else {
+      *label_it = 0;
+    }
+  }
+  // extract objects
+  segmentation.label_count_ = vigra::labelImageWithBackground(
+    vigra::srcImageRange(segmentation.label_image_),
+    vigra::destImage(segmentation.segmentation_image_),
+    1,
+    0);
+  // TODO:
+  // if (options.count("border") > 0) {
+  //   ignore_border_cc<2>(label_image, options["border"]);
+  // }
+  // done
+  return return_status;
+}
+
+// TODO: superugly
+template<>
+int SegmentationCalculator<2>::reshape_features(
+  const vigra::MultiArray<3, DataType>& features,
+  vigra::MultiArray<2, DataType>& features_reshaped)
+{
+  size_t size_0 = features.size(0);
+  size_t size_1 = features.size(1);
+  size_t size_2 = features.size(2);
+  size_t n = 0;
+  features_reshaped.reshape(vigra::Shape2(size_0 * size_1, size_2));
+  for (size_t index_0 = 0; index_0 < size_0; index_0++) {
+    for (size_t index_1 = 0; index_1 < size_1; index_1++) {
+      for (size_t index_2 = 0; index_2 < size_2; index_2++) {
+        features_reshaped(n, index_2) = features(index_0, index_1, index_2);
+      }
+      n++;
+    }
+  }
+  return 0;
+}
+
+template<>
+int SegmentationCalculator<3>::reshape_features(
+  const vigra::MultiArray<4, DataType>& features,
+  vigra::MultiArray<2, DataType>& features_reshaped)
+{
+  size_t size_0 = features.size(0);
+  size_t size_1 = features.size(1);
+  size_t size_2 = features.size(2);
+  size_t size_3 = features.size(3);
+  size_t n = 0;
+  features_reshaped.reshape(vigra::Shape2(size_0 * size_1 * size_2, size_3));
+  for (size_t index_0 = 0; index_0 < size_0; index_0++) {
+    for (size_t index_1 = 0; index_1 < size_1; index_1++) {
+      for (size_t index_2 = 0; index_2 < size_2; index_2++) {
+        for (size_t index_3 = 0; index_3 < size_3; index_3++) {
+          features_reshaped(n, index_3) = features(
+            index_0,
+            index_1,
+            index_2,
+            index_3);
+        }
+        n++;
+      }
+    }
+  }
+  return 0;
+}
 
 } // namespace isbi_pipeline

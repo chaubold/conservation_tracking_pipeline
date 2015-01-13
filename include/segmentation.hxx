@@ -88,6 +88,9 @@ class SegmentationCalculator {
     const vigra::MultiArray<N, DataType>& image,
     Segmentation<N>& segmentation) const;
  private:
+  int reshape_features(
+    const vigra::MultiArray<N+1, DataType>& features,
+    vigra::MultiArray<2, DataType>& features_reshaped);
   boost::shared_ptr<FeatureCalculator<N> > feature_calculator_ptr_;
   const std::vector<RandomForestType> random_forests_;
 };
