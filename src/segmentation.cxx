@@ -268,6 +268,14 @@ template<int N>
 void Segmentation<N>::initialize(const vigra::MultiArray<N, DataType>& image) {
   segmentation_image_.reshape(image.shape());
   label_image_.reshape(image.shape());
+  // TODO ugly
+  typename vigra::MultiArrayShape<N+1>::type prediction_map_shape;
+  for (size_t i = 0; i < N; i++) {
+    prediction_map_shape[i] = image.shape(i);
+  }
+  prediction_map_shape[N] = 2;
+  prediction_map_.reshape(prediction_map_shape);
+  prediction_map_.init(0.0);
 }
 
 template<int N>
@@ -275,6 +283,10 @@ int Segmentation<N>::export_hdf5(const std::string filename) {
   vigra::writeHDF5(filename.c_str(), "/segmentation/segmentation", segmentation_image_);
   vigra::writeHDF5(filename.c_str(), "/segmentation/labels", label_image_);
   vigra::writeHDF5(filename.c_str(), "/segmentation/features", feature_image_);
+  vigra::writeHDF5(
+    filename.c_str(),
+    "/segmentation/prediction_map",
+    prediction_map_);
   return 0;
 }
 
@@ -304,30 +316,38 @@ int SegmentationCalculator<N>::calculate(
   // initialize the segmentation
   segmentation.initialize(image);
   // calculate the features and reshape them
-  vigra::MultiArray<2, DataType> reshaped_features;
   feature_calculator_ptr_->calculate(image, segmentation.feature_image_);
-  reshape_features(segmentation.feature_image_, reshaped_features);
-  // initialize arrays for segmentation
-  vigra::MultiArray<2, DataType> label_probabilities(
-    vigra::Shape2(reshaped_features.shape(0), 2),
-    0.0);
-  vigra::MultiArray<2, DataType> label_probabilities_temp(
-    vigra::Shape2(reshaped_features.shape(0), 2),
-    0.0);
+  // get the count of pixels in image
+  size_t pixel_count = 1;
+  for (size_t dim = 0; dim < N; dim++) {
+    pixel_count *= image.shape(dim);
+  }
+  // get the feature dimension
+  size_t feature_dim = segmentation.feature_image_.shape(N);
+  // create a view with all image dimensions flattened
+  vigra::MultiArrayView<2, DataType> feature_view(
+    vigra::Shape2(pixel_count, feature_dim),
+    segmentation.feature_image_.data());
+  vigra::MultiArrayView<2, DataType> prediction_map_view(
+    vigra::Shape2(pixel_count, 2),
+    segmentation.prediction_map_.data());
+  vigra::MultiArray<2, DataType> prediction_temp(pixel_count, 2);
   // loop over all random forests for prediction probabilities
   for (
     std::vector<RandomForestType>::const_iterator it = random_forests_.begin();
     it != random_forests_.end();
     it++
   ) {
-    it->predictProbabilities(reshaped_features, label_probabilities_temp);
-    label_probabilities += label_probabilities_temp;
+    it->predictProbabilities(
+      feature_view,
+      prediction_temp);
+    prediction_map_view += prediction_temp;
   }
   // assign the labels
   typename vigra::MultiArray<N, unsigned>::iterator label_it;
   label_it = segmentation.label_image_.begin();
-  for (size_t n = 0; n < reshaped_features.shape(0); n++) {
-    if (label_probabilities(n, 1) > label_probabilities(n, 0)) {
+  for (size_t n = 0; n < pixel_count; n++) {
+    if (prediction_map_view(n, 1) > prediction_map_view(n, 0)) {
       *label_it = 1;
     } else {
       *label_it = 0;
@@ -347,58 +367,7 @@ int SegmentationCalculator<N>::calculate(
   return return_status;
 }
 
-// TODO: superugly
-template<>
-int SegmentationCalculator<2>::reshape_features(
-  const vigra::MultiArray<3, DataType>& features,
-  vigra::MultiArray<2, DataType>& features_reshaped) const
-{
-  size_t size_0 = features.size(0);
-  size_t size_1 = features.size(1);
-  size_t size_2 = features.size(2);
-  size_t n = 0;
-  features_reshaped.reshape(vigra::Shape2(size_0 * size_1, size_2));
-  for (size_t index_0 = 0; index_0 < size_0; index_0++) {
-    for (size_t index_1 = 0; index_1 < size_1; index_1++) {
-      for (size_t index_2 = 0; index_2 < size_2; index_2++) {
-        features_reshaped(n, index_2) = features(index_0, index_1, index_2);
-      }
-      n++;
-    }
-  }
-  return 0;
-}
-
-template<>
-int SegmentationCalculator<3>::reshape_features(
-  const vigra::MultiArray<4, DataType>& features,
-  vigra::MultiArray<2, DataType>& features_reshaped) const
-{
-  size_t size_0 = features.size(0);
-  size_t size_1 = features.size(1);
-  size_t size_2 = features.size(2);
-  size_t size_3 = features.size(3);
-  size_t n = 0;
-  features_reshaped.reshape(vigra::Shape2(size_0 * size_1 * size_2, size_3));
-  for (size_t index_0 = 0; index_0 < size_0; index_0++) {
-    for (size_t index_1 = 0; index_1 < size_1; index_1++) {
-      for (size_t index_2 = 0; index_2 < size_2; index_2++) {
-        for (size_t index_3 = 0; index_3 < size_3; index_3++) {
-          features_reshaped(n, index_3) = features(
-            index_0,
-            index_1,
-            index_2,
-            index_3);
-        }
-        n++;
-      }
-    }
-  }
-  return 0;
-}
-
 // explicit instantiation
-// TODO for dim = 3 as well
 template class SegmentationCalculator<2>;
 
 } // namespace isbi_pipeline
