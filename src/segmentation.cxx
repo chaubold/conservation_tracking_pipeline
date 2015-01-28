@@ -97,11 +97,11 @@ int FeatureCalculator<N>::calculate_gaussian_gradient_magnitude(
     destMultiArray(temp),
     feature_scale,
     conv_options_);
-  vigra::VectorNormSqFunctor<vigra::TinyVector<DataType, N> > sq_norm;
+  vigra::VectorNormFunctor<vigra::TinyVector<DataType, N> > norm;
   vigra::transformMultiArray(
     srcMultiArrayRange(temp),
     destMultiArray(results),
-    sq_norm);
+    norm);
   return 0;
 }
 
@@ -140,8 +140,8 @@ int FeatureCalculator<N>::calculate_structure_tensor_eigenvalues(
   vigra::structureTensorMultiArray(
     srcMultiArrayRange(image),
     destMultiArray(tensor),
-    feature_scale * 0.5, // TODO in original code inner and outer scale swapped
     feature_scale,
+    feature_scale * 0.5,
     conv_options_);
   vigra::tensorEigenvaluesMultiArray(
     srcMultiArrayRange(tensor),
