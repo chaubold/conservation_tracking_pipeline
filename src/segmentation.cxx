@@ -1,6 +1,7 @@
 // vigra
 #include <vigra/labelimage.hxx> /* for labelImageWithBackground */
 #include <vigra/multi_tensorutilities.hxx>
+#include <vigra/hdf5impex.hxx> /* for writeHDF5 */
 
 #include "segmentation.hxx"
 
@@ -269,6 +270,14 @@ void Segmentation<N>::initialize(const vigra::MultiArray<N, DataType>& image) {
   label_image_.reshape(image.shape());
 }
 
+template<int N>
+int Segmentation<N>::export_hdf5(const std::string filename) {
+  vigra::writeHDF5(filename.c_str(), "/segmentation/segmentation", segmentation_image_);
+  vigra::writeHDF5(filename.c_str(), "/segmentation/labels", label_image_);
+  vigra::writeHDF5(filename.c_str(), "/segmentation/features", feature_image_);
+  return 0;
+}
+
 // explicit instantiation
 // TODO for dim = 3 as well
 template class Segmentation<2>;
@@ -295,10 +304,9 @@ int SegmentationCalculator<N>::calculate(
   // initialize the segmentation
   segmentation.initialize(image);
   // calculate the features and reshape them
-  vigra::MultiArray<N+1, DataType> features;
   vigra::MultiArray<2, DataType> reshaped_features;
-  feature_calculator_ptr_->calculate(image, features);
-  reshape_features(features, reshaped_features);
+  feature_calculator_ptr_->calculate(image, segmentation.feature_image_);
+  reshape_features(segmentation.feature_image_, reshaped_features);
   // initialize arrays for segmentation
   vigra::MultiArray<2, DataType> label_probabilities(
     vigra::Shape2(reshaped_features.shape(0), 2),

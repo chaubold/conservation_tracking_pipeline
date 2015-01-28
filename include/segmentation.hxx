@@ -68,9 +68,11 @@ template<int N>
 struct Segmentation {
   vigra::MultiArray<N, unsigned> segmentation_image_;
   vigra::MultiArray<N, unsigned> label_image_;
+  vigra::MultiArray<N+1, DataType> feature_image_;
   size_t label_count_;
   
   void initialize(const vigra::MultiArray<N, DataType>& image);
+  int export_hdf5(const std::string filename);
 };
 
 template<int N>

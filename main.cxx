@@ -53,6 +53,7 @@ typedef std::map<std::string, double> StringDoubleMapType;
 typedef vigra::MultiArray<2, DataType> DataMatrixType;
 typedef vigra::MultiArray<2, FeatureType> FeatureMatrixType;
 typedef vigra::MultiArray<2, unsigned> UIntMatrixType;
+typedef vigra::MultiArray<2, unsigned short> UShortMatrixType;
 // Further vigra types
 typedef vigra::RandomForest<unsigned> RandomForestType;
 typedef vigra::CoupledIteratorType<2, unsigned, unsigned>::type
@@ -181,15 +182,25 @@ int main(int argc, char** argv) {
       DataMatrixType src_unsmoothed(shape);
       // read the image pixel data
       vigra::importImage(info, vigra::destImage(src_unsmoothed));
+      std::cout << "Calculate features" << std::flush;
       isbi_pipeline::Segmentation<2> segmentation;
       seg_calc.calculate(src_unsmoothed, segmentation);
       if (options.count("border") > 0) {
         ignore_border_cc<2>(segmentation.label_image_, options["border"]);
       }
+      std::cout << ": done" << std::endl;
       // save the segmentation results
       std::stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str << "_RES/"
-        << "mask" << zero_padding(timestep, 2) + ".tif";
+        << "mask" << zero_padding(timestep, 2);
+      std::cout << "Save results to " << segmentation_result_path.str() + ".h5";
+      std::cout << std::endl;
+      segmentation.export_hdf5(segmentation_result_path.str() + ".h5");
+      std::cout << "Save results to " << segmentation_result_path.str() + ".tif";
+      std::cout << std::endl;
+      vigra::exportImage(
+        vigra::srcImageRange(UShortMatrixType(segmentation.label_image_)),
+        vigra::ImageExportInfo((segmentation_result_path.str()+".tif").c_str()));
       // TODO why are the following lines commented?
       // vigra::exportImage(
       //  vigra::srcImageRange<unsigned, vigra::StandardConstAccessor<short> >(label_image),
@@ -271,12 +282,6 @@ int main(int argc, char** argv) {
           pgmlink::add(ts, trax);
         }
       }
-      // typedef for convenience
-      typedef vigra::MultiArray<2, unsigned short> UShortMatrixType;
-      // save the segmentation
-      vigra::exportImage(
-        vigra::srcImageRange(UShortMatrixType(segmentation.label_image_)),
-        vigra::ImageExportInfo(segmentation_result_path.str().c_str()));
     }
     // end of iteration over all filenames/timesteps
 
