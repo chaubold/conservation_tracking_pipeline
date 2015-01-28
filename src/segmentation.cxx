@@ -19,8 +19,8 @@ FeatureCalculator<N>::FeatureCalculator(
   // initialize the feature dimension map
   feature_sizes_["GaussianSmoothing"] = 1;
   feature_sizes_["LaplacianOfGaussians"] = 1;
-  feature_sizes_["StructureTensorEigenvalues"] = 3;
-  feature_sizes_["HessianOfGaussianEigenvalues"] = 3;
+  feature_sizes_["StructureTensorEigenvalues"] = N;
+  feature_sizes_["HessianOfGaussianEigenvalues"] = N;
   feature_sizes_["GaussianGradientMagnitude"] = 1;
   feature_sizes_["DifferenceOfGaussians"] = 1;
   // set the filter window size
@@ -318,7 +318,7 @@ int SegmentationCalculator<N>::calculate(
   // assign the labels
   typename vigra::MultiArray<N, unsigned>::iterator label_it;
   label_it = segmentation.label_image_.begin();
-  for (size_t n = 0; n < features.shape(0); n++) {
+  for (size_t n = 0; n < reshaped_features.shape(0); n++) {
     if (label_probabilities(n, 1) > label_probabilities(n, 0)) {
       *label_it = 1;
     } else {
