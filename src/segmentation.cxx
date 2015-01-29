@@ -363,7 +363,7 @@ int SegmentationCalculator<N>::calculate(
   typename vigra::MultiArrayView<N, unsigned>::iterator seg_it;
   seg_it = segmentation.segmentation_image_.begin();
   for (size_t n = 0; n < pixel_count; n++, seg_it++) {
-    if (prediction_map_view(n, 1) > prediction_map_view(n, 0)) { // TODO compare probabilities
+    if (prediction_map_view(n, 1) > prediction_map_view(n, 0)) {
       *seg_it = 1;
     } else {
       *seg_it = 0;
@@ -375,6 +375,7 @@ int SegmentationCalculator<N>::calculate(
     vigra::destImage(segmentation.label_image_),
     1,
     0);
+  LOG("Found " << segmentation.label_count_ << " objects");
   // TODO:
   // if (options.count("border") > 0) {
   //   ignore_border_cc<2>(label_image, options["border"]);
@@ -385,5 +386,76 @@ int SegmentationCalculator<N>::calculate(
 
 // explicit instantiation
 template class SegmentationCalculator<2>;
+
+////
+//// class TraxelExtractor
+////
+template<int N>
+TraxelExtractor<N>::TraxelExtractor(
+    unsigned int border_distance,
+    unsigned int lower_size_lim,
+    unsigned int upper_size_lim) :
+  border_distance_(border_distance),
+  lower_size_lim_(lower_size_lim),
+  upper_size_lim_(upper_size_lim)
+{
+  // assertions?
+}
+
+template<int N>
+int TraxelExtractor<N>::extract(
+  const Segmentation<N>& segmentation,
+  const int timestep,
+  pgmlink::TraxelStore traxelstore) const
+{
+  LOG("Extract traxel");
+  int return_status = 0;
+  // calculate the size and coordinate center of mass
+  AccChainType acc_chain;
+  CoupledIteratorType start_it = vigra::createCoupledIterator(
+    segmentation.label_image_,
+    segmentation.label_image_);
+  CoupledIteratorType end_it = start_it.getEndIterator();
+  vigra::acc::extractFeatures(start_it, end_it, acc_chain);
+  // loop over all labels
+  for (size_t label_id = 1; label_id <= segmentation.label_count_; label_id++) {
+    extract_for_label(acc_chain, label_id, timestep, traxelstore);
+  }
+  return return_status;
+}
+
+template<int N>
+int TraxelExtractor<N>::extract_for_label(
+  const AccChainType& acc_chain,
+  const size_t label_id,
+  const int timestep,
+  pgmlink::TraxelStore traxelstore) const
+{
+  // TODO border filter
+  typedef vigra::acc::Coord<vigra::acc::Mean> CoordMeanType;
+  int return_status = 0;
+  // get the object size
+  float size = vigra::acc::get<vigra::acc::Count>(acc_chain, label_id);
+  // filter size
+  bool fits_lower_lim = ((lower_size_lim_ == 0) or (size >= lower_size_lim_));
+  bool fits_upper_lim = ((upper_size_lim_ == 0) or (size <= upper_size_lim_));
+  if (fits_upper_lim and fits_lower_lim) {
+    // get the com
+    std::vector<float> com(
+      vigra::acc::get<CoordMeanType>(acc_chain, label_id).begin(),
+      vigra::acc::get<CoordMeanType>(acc_chain, label_id).end());
+    // fill the feature map
+    pgmlink::FeatureMap feature_map;
+    feature_map["com"] = com;
+    feature_map["count"].push_back(size);
+    // create the traxel and add it to the traxel store
+    pgmlink::Traxel traxel(label_id, timestep, feature_map);
+    pgmlink::add(traxelstore, traxel);
+  }
+  return return_status;
+}
+
+// explicit instantiation
+template class TraxelExtractor<2>;
 
 } // namespace isbi_pipeline

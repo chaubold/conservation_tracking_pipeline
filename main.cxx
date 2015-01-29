@@ -25,7 +25,6 @@
 #include <vigra/random_forest.hxx>
 #include <vigra/multi_convolution.hxx>
 #include <vigra/labelimage.hxx>
-#include <vigra/accumulator.hxx>
 #include <vigra/accessor.hxx>
 
 // pgmlink
@@ -38,7 +37,6 @@
 
 
 // Aliases for convenience
-namespace acc = vigra::acc;
 namespace fs = boost::filesystem;
 
 // Typedefs for convenience
@@ -56,16 +54,6 @@ typedef vigra::MultiArray<2, unsigned> UIntMatrixType;
 typedef vigra::MultiArray<2, unsigned short> UShortMatrixType;
 // Further vigra types
 typedef vigra::RandomForest<unsigned> RandomForestType;
-typedef vigra::CoupledIteratorType<2, unsigned, unsigned>::type
-  CoupledIteratorType;
-typedef acc::AccumulatorChainArray<
-  CoupledIteratorType::value_type,
-  acc::Select<
-    acc::DataArg<1>,
-    acc::LabelArg<2>,
-    acc::Count,
-    acc::Coord<acc::Mean> >
-> AccChainType;
 // Container types of the standard library with vigra types
 // TODO Refactor feature calculation without awkward FeatureStorageType
 typedef std::vector<std::vector<FeatureMatrixType> > FeatureStorageType;
@@ -159,8 +147,10 @@ int main(int argc, char** argv) {
     boost::shared_ptr<isbi_pipeline::FeatureCalculator<2> > feature_calc_ptr(
       new isbi_pipeline::FeatureCalculator<2>(feature_list));
     isbi_pipeline::SegmentationCalculator<2> seg_calc(feature_calc_ptr, rfs);
+    // create the traxel extractor
+    isbi_pipeline::TraxelExtractor<2> traxel_extractor(0, 100, 0);
 
-    // iterate over the filenames
+    // iterate over the filenames TODO timestep counting not correct
     for (
       std::vector<fs::path>::iterator dir_itr = fn_vec.begin();
       dir_itr != fn_vec.end();
@@ -185,9 +175,6 @@ int main(int argc, char** argv) {
       std::cout << "Calculate features" << std::endl;
       isbi_pipeline::Segmentation<2> segmentation;
       seg_calc.calculate(src_unsmoothed, segmentation);
-      if (options.count("border") > 0) {
-        ignore_border_cc<2>(segmentation.label_image_, options["border"]);
-      }
       // save the segmentation results
       std::stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str << "_RES/"
@@ -200,81 +187,8 @@ int main(int argc, char** argv) {
       vigra::exportImage(
         vigra::srcImageRange(UShortMatrixType(segmentation.label_image_)),
         vigra::ImageExportInfo((segmentation_result_path.str()+".tif").c_str()));
-      // calculate size and com with an accumulator chain to build the
-      // TraxelStore
-      AccChainType accu_chain;
-      // TODO why is the label image of the filtered labels updated for t == 0?
-      // Remove?
-      std::vector<unsigned> filtered_labels_at_0;
-      CoupledIteratorType start = vigra::createCoupledIterator(
-        segmentation.label_image_,
-        segmentation.label_image_);
-      CoupledIteratorType end = start.getEndIterator();
-      // calculate the size and coordinate center of mass
-      acc::extractFeatures(start, end, accu_chain);
-      // variable for relabeling the filtered objects for t == 0
-      int count_true_object = 1;
-      // loop over all objects
-      for (size_t i = 1; i <= segmentation.label_count_; ++i) {
-        // get the object size
-        float size = acc::get<acc::Count>(accu_chain, i);
-        // check if the object is within the desired size range
-        bool fits_lower_limit = true;
-        if (options.count("size_from") > 0) {
-          fits_lower_limit = (size >= options["size_from"]);
-        }
-        bool fits_upper_limit = true;
-        if (options.count("size_to") > 0) {
-          fits_upper_limit = (size <= options["size_to"]);
-        }
-        if (!(fits_lower_limit && fits_upper_limit)) {
-          if (timestep == 0) {
-            filtered_labels_at_0.push_back(i);
-            set_pixels_of_cc_to_value<2>(segmentation.label_image_, i, 0);
-          }
-          continue;
-        }
-        // create a traxel for each object that passed the size filter
-        // TODO Remove the following if-else statement as well if the filtered
-        // label image is removed.
-        if (timestep == 0) {
-          set_pixels_of_cc_to_value<2>(
-            segmentation.label_image_,
-            i,
-            count_true_object);
-          typedef acc::Coord<acc::Mean> CoordMeanType;
-          std::vector<float> com(
-            acc::get<CoordMeanType>(accu_chain, count_true_object).begin(),
-            acc::get<CoordMeanType>(accu_chain, count_true_object).end());
-          if (com.size() == 2) {
-            com.push_back(0);
-          }
-          pgmlink::FeatureMap f_map;
-          f_map["com"] = com;
-          f_map["count"].push_back(size);
-          pgmlink::Traxel trax(count_true_object, timestep, f_map);
-          pgmlink::add(ts, trax);
-          ++count_true_object;
-        } else {
-          // get center of mass for the current object
-          typedef acc::Coord<acc::Mean> CoordMeanType;
-          std::vector<float> com(
-            acc::get<CoordMeanType>(accu_chain, i).begin(),
-            acc::get<CoordMeanType>(accu_chain, i).end());
-          if (com.size() == 2) {
-            com.push_back(0);
-          } else {
-            throw std::runtime_error("Wrong dimension of COM");
-          }
-          // write size and com into a feature map
-          pgmlink::FeatureMap f_map;
-          f_map["com"] = com;
-          f_map["count"].push_back(size);
-          // create the traxel and add it to the feature store
-          pgmlink::Traxel trax(i, timestep, f_map);
-          pgmlink::add(ts, trax);
-        }
-      }
+      // create traxels and add them to the traxelstore
+      traxel_extractor.extract(segmentation, timestep, ts);
     }
     // end of iteration over all filenames/timesteps
 
