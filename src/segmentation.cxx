@@ -5,6 +5,13 @@
 
 #include "segmentation.hxx"
 
+#ifdef NDEBUG
+  #define LOG(message)
+#else
+  #include <iostream>
+  #define LOG(message) std::cout << message << std::endl
+#endif
+
 namespace isbi_pipeline {
 
 ////
@@ -60,6 +67,7 @@ int FeatureCalculator<N>::calculate_gaussian_smoothing(
   vigra::MultiArrayView<N+1, DataType>& features,
   double feature_scale) const
 {
+  LOG("calculate gaussian smoothing (" << feature_scale << ")");
   vigra::MultiArrayView<N, DataType> results(features.bindAt(N,0));
   vigra::gaussianSmoothMultiArray(
     srcMultiArrayRange(image),
@@ -75,6 +83,7 @@ int FeatureCalculator<N>::calculate_laplacian_of_gaussians(
   vigra::MultiArrayView<N+1, DataType>& features,
   double feature_scale) const
 {
+  LOG("calculate laplacian of gaussians (" << feature_scale << ")");
   vigra::MultiArrayView<N, DataType> results(features.bindAt(N,0));
   vigra::laplacianOfGaussianMultiArray(
     srcMultiArrayRange(image),
@@ -90,6 +99,7 @@ int FeatureCalculator<N>::calculate_gaussian_gradient_magnitude(
   vigra::MultiArrayView<N+1, DataType>& features,
   double feature_scale) const
 {
+  LOG("calculate gaussian gradient magnitude (" << feature_scale << ")");
   vigra::MultiArrayView<N, DataType> results(features.bindAt(2, 0));
   vigra::MultiArray<N, vigra::TinyVector<DataType, N> > temp(image.shape());
   vigra::gaussianGradientMultiArray(
@@ -111,6 +121,7 @@ int FeatureCalculator<N>::calculate_difference_of_gaussians(
   vigra::MultiArrayView<N+1, DataType>& features,
   double feature_scale) const
 {
+  LOG("calculate difference of gaussians (" << feature_scale << ")");
   vigra::MultiArray<N, DataType> temp(image.shape());
   vigra::MultiArrayView<N, DataType> results(features.bindAt(N,0));
   vigra::gaussianSmoothMultiArray(
@@ -133,6 +144,7 @@ int FeatureCalculator<N>::calculate_structure_tensor_eigenvalues(
   vigra::MultiArrayView<N+1, DataType>& features,
   double feature_scale) const
 {
+  LOG("calculate structure tensor eigenvalues (" << feature_scale << ")");
   vigra::MultiArray<N, vigra::TinyVector<DataType, (N*(N+1))/2> > tensor(
     image.shape());
   vigra::MultiArray<N, vigra::TinyVector<DataType, N> > eigenvalues(
@@ -156,6 +168,7 @@ int FeatureCalculator<N>::calculate_hessian_of_gaussian_eigenvalues(
   vigra::MultiArrayView<N+1, DataType>& features,
   double feature_scale) const
 {
+  LOG("calculate hessian of gaussian eigenvalues (" << feature_scale << ")");
   vigra::MultiArray<N, vigra::TinyVector<DataType, (N*(N+1))/2> > hessian(
     image.shape());
   vigra::MultiArray<N, vigra::TinyVector<DataType, N> > eigenvalues(
@@ -212,6 +225,7 @@ int FeatureCalculator<2>::calculate(
     }
     offset += size;
   }
+  LOG("Feature calculation done");
   return 0;
 }
 
@@ -333,6 +347,7 @@ int SegmentationCalculator<N>::calculate(
     segmentation.prediction_map_.data());
   vigra::MultiArray<2, DataType> prediction_temp(pixel_count, 2);
   // loop over all random forests for prediction probabilities
+  LOG("Evaluate random forests");
   for (
     std::vector<RandomForestType>::const_iterator it = random_forests_.begin();
     it != random_forests_.end();

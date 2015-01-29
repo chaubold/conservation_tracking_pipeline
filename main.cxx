@@ -182,31 +182,24 @@ int main(int argc, char** argv) {
       DataMatrixType src_unsmoothed(shape);
       // read the image pixel data
       vigra::importImage(info, vigra::destImage(src_unsmoothed));
-      std::cout << "Calculate features" << std::flush;
+      std::cout << "Calculate features" << std::endl;
       isbi_pipeline::Segmentation<2> segmentation;
       seg_calc.calculate(src_unsmoothed, segmentation);
       if (options.count("border") > 0) {
         ignore_border_cc<2>(segmentation.label_image_, options["border"]);
       }
-      std::cout << ": done" << std::endl;
       // save the segmentation results
       std::stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str << "_RES/"
-        << "mask" << zero_padding(timestep, 2);
-      std::cout << "Save results to " << segmentation_result_path.str() + ".h5";
-      std::cout << std::endl;
+        << "segmentation" << zero_padding(timestep, 2);
+      std::cout << "Save results to " << segmentation_result_path.str() + ".h5"
+        << std::endl;
       segmentation.export_hdf5(segmentation_result_path.str() + ".h5");
-      std::cout << "Save results to " << segmentation_result_path.str() + ".tif";
-      std::cout << std::endl;
+      std::cout << "Save results to " << segmentation_result_path.str() + ".tif"
+        << std::endl;
       vigra::exportImage(
         vigra::srcImageRange(UShortMatrixType(segmentation.label_image_)),
         vigra::ImageExportInfo((segmentation_result_path.str()+".tif").c_str()));
-      // TODO why are the following lines commented?
-      // vigra::exportImage(
-      //  vigra::srcImageRange<unsigned, vigra::StandardConstAccessor<short> >(label_image),
-      //  vigra::ImageExportInfo(segmentation_result_path.str().c_str()));
-      //  // .setPixelType("INT16"));
-
       // calculate size and com with an accumulator chain to build the
       // TraxelStore
       AccChainType accu_chain;
