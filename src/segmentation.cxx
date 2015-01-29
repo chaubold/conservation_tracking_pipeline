@@ -358,20 +358,21 @@ int SegmentationCalculator<N>::calculate(
       prediction_temp);
     prediction_map_view += prediction_temp;
   }
+  LOG("Assign the segmentation labels");
   // assign the labels
-  typename vigra::MultiArray<N, unsigned>::iterator label_it;
-  label_it = segmentation.label_image_.begin();
-  for (size_t n = 0; n < pixel_count; n++) {
-    if (prediction_map_view(n, 1) > prediction_map_view(n, 0)) {
-      *label_it = 1;
+  typename vigra::MultiArrayView<N, unsigned>::iterator seg_it;
+  seg_it = segmentation.segmentation_image_.begin();
+  for (size_t n = 0; n < pixel_count; n++, seg_it++) {
+    if (prediction_map_view(n, 1) > prediction_map_view(n, 0)) { // TODO compare probabilities
+      *seg_it = 1;
     } else {
-      *label_it = 0;
+      *seg_it = 0;
     }
   }
   // extract objects
   segmentation.label_count_ = vigra::labelImageWithBackground(
-    vigra::srcImageRange(segmentation.label_image_),
-    vigra::destImage(segmentation.segmentation_image_),
+    vigra::srcImageRange(segmentation.segmentation_image_),
+    vigra::destImage(segmentation.label_image_),
     1,
     0);
   // TODO:
