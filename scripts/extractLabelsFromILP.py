@@ -17,7 +17,8 @@ if __name__ == "__main__":
 	try:
 	    labels = in_f['/PixelClassification/LabelSets']
 	except:
-	    print "No labeling datasets in provided HDF5-File"
+	    raise Exception("No labeling datasets in provided HDF5-File")
+
 
 	for frame in labels.keys():
 		frameLabels = labels[frame]
