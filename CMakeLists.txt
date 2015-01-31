@@ -26,9 +26,9 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_extensions/)
 	FORCE)
     ENDIF(NOT CMAKE_BUILD_TYPE)
 
-    SET(CMAKE_CXX_FLAGS "-Wall -Wextra -Wfatal-errors -std=c++98 -pedantic -pthread")
-    SET(CMAKE_CXX_FLAGS_DEBUG "-Wno-long-long -g -O0")
-    SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -Werror")
+    SET(CMAKE_CXX_FLAGS "-Wall -Wextra -Wfatal-errors -std=c++98 -pedantic -pthread ${CMAKE_CXX_FLAGS}")
+    SET(CMAKE_CXX_FLAGS_DEBUG "-Wno-long-long -g -O0 ${CMAKE_CXX_FLAGS_DEBUG}")
+    SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -Werror ${CMAKE_CXX_FLAGS_RELEASE}")
     SET(CMAKE_EXE_LINKER_FLAGS "")
 
     SET(WITH_CHECKED_STL "True" CACHE BOOL "Build with checked libg++ for more robust code (may degrade performance).")
