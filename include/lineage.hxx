@@ -7,6 +7,9 @@
 #include <utility> /* for std::pair */
 #include <ostream> /* for overloading << */
 
+// vigra
+#include <vigra/multi_array.hxx> /* for MultiArray */
+
 // pgmlink
 #include <pgmlink/event.h> /* for pgmlink::Event */
 
@@ -24,6 +27,10 @@ class Lineage {
   Lineage(const EventVectorVectorType& events);
   TraxelIndexVectorType get_traxel_ids(const unsigned track_index) const;
   unsigned get_track_id(const TraxelIndexType traxel_index) const;
+  template<int N>
+  void relabel(
+    vigra::MultiArrayView<N, unsigned>& label_image,
+    const int timestep) const;
  private:
   void handle_event(const pgmlink::Event& event, const int timestep);
   void handle_appearance(const pgmlink::Event& event, const int timestep);
@@ -40,6 +47,26 @@ class Lineage {
   std::map<unsigned, unsigned> track_track_parent_map_;
   friend std::ostream& operator<<(std::ostream& s, const Lineage& lineage);
 };
+
+// implementation
+template<int N>
+void Lineage::relabel(
+  vigra::MultiArrayView<N, unsigned>& label_image,
+  const int timestep) const
+{
+  TraxelTrackIndexMapType::const_iterator traxel_track_it;
+  typedef typename vigra::MultiArrayView<N, unsigned>::iterator ImageItType;
+  for (ImageItType it = label_image.begin(); it != label_image.end(); it++) {
+    std::pair<int, unsigned> traxel_index(timestep, *it);
+    traxel_track_it = traxel_track_map_.find(traxel_index);
+    if (traxel_track_it != traxel_track_map_.end()){
+      *it = traxel_track_it->second;
+    } else {
+      *it = 0;
+    }
+  }
+}
+
 
 } // namespace isbi_pipeline
 

@@ -144,8 +144,32 @@ int main(int argc, char** argv) {
     //=========================================================================
     // handle results
     //=========================================================================
+    // create lineage object
     isbi_pipeline::Lineage lineage(events);
     std::cout << lineage;
+    timestep = 0;
+    for (
+      std::vector<fs::path>::iterator dir_itr = fn_vec.begin();
+      dir_itr != fn_vec.end();
+      ++dir_itr, ++timestep)
+    {
+      std::string filename(dir_itr->string());
+      std::cout << "relabel " << filename << std::endl;
+      // load the segmentation once again
+      isbi_pipeline::Segmentation<2> segmentation;
+      segmentation.read_hdf5(filename);
+      // relabel the label image
+      lineage.relabel<2>(segmentation.label_image_, timestep);
+      // save the relabeled image
+      std::stringstream mask_image_path;
+      mask_image_path << h5_dir_str << "/" << "mask"
+        << zero_padding(timestep, 3) << ".tif";
+      std::cout << "Save results to " << mask_image_path.str() << std::endl;
+      vigra::exportImage(
+        vigra::srcImageRange(UShortMatrixType(segmentation.label_image_)),
+        vigra::ImageExportInfo(mask_image_path.str().c_str()));
+    }
+
     return 0;
 
   } catch (ArgumentError& e) {
