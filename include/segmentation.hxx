@@ -75,6 +75,7 @@ struct Segmentation {
   
   void initialize(const vigra::MultiArray<N, DataType>& image);
   int export_hdf5(const std::string filename);
+  int read_hdf5(const std::string filename);
 };
 
 template<int N>
