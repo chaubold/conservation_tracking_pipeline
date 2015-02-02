@@ -47,7 +47,7 @@ INCLUDE_DIRECTORIES(include)
 #CPLEX switch to be compatible with STL
 ADD_DEFINITIONS(-DIL_STD)
 
-ADD_LIBRARY(pipeline_helpers STATIC src/pipeline_helpers.cxx src/segmentation.cxx)
+ADD_LIBRARY(pipeline_helpers STATIC src/pipeline_helpers.cxx src/segmentation.cxx src/lineage.cxx)
 
 ADD_EXECUTABLE(isbi_pipeline main.cxx)
 TARGET_LINK_LIBRARIES(isbi_pipeline pipeline_helpers ${PGMLINK_LIBRARIES} ${VIGRA_IMPEX_LIBRARY} ${Boost_LIBRARIES})

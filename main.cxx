@@ -34,6 +34,7 @@
 // own
 #include "pipeline_helpers.hxx"
 #include "segmentation.hxx"
+#include "lineage.hxx"
 
 
 // Aliases for convenience
@@ -200,67 +201,9 @@ int main(int argc, char** argv) {
     //=========================================================================
     // handle results
     //=========================================================================
-    // Print the results to std::cout
-    for(
-      EventVectorVectorType::const_iterator ev_it = events.begin();
-      ev_it != events.end();
-      ++ev_it)
-    {
-      for (
-        EventVectorType::const_iterator ev = ev_it->begin();
-        ev != ev_it->end();
-        ++ev)
-      {
-        std::cout << *ev << "\n";
-      }
-      std::cout << "\n";
-    }
-
-    // create the lineage
-    std::vector<Lineage> lineage_vec;
-
-    std::vector<fs::path> res_fn_vec;
-    // write all filenames that end with *.tif into the res_fn_vec
-    copy_if_own(
-      fs::directory_iterator(res_dir),
-      fs::directory_iterator(),
-      back_inserter(res_fn_vec),
-      tif_chooser);
-    std::sort(res_fn_vec.begin(), res_fn_vec.end());
-    std::cout << res_fn_vec[0].string() << "\n";
-
-    // write the lineages to the lineage file
-    vigra::ImageImportInfo info_general(res_fn_vec[0].string().c_str());
-    vigra::MultiArrayShape<2>::type shape_general(info_general.shape());
-    UIntMatrixType base_img(shape_general);
-    vigra::importImage(info_general, vigra::destImage(base_img));
-    int max_l_id = initialize_lineages<2>(lineage_vec, base_img);
-
-    // create lineages from the events
-    transform_events<2>(
-      events,
-      ++res_fn_vec.begin(),
-      res_fn_vec.end(),
-      lineage_vec,
-      shape_general,
-      max_l_id,
-      1);
-    // save the lineages
-    write_lineages(lineage_vec, res_dir_str + "/res_track.txt");
-
-    // base_img = MultiArray<2, unsigned>();
-
-    /* close_open_lineages(lineage_vec, 500);
-    for (std::vector<Lineage>::iterator lm_it = lineage_vec.begin(); lm_it != lineage_vec.end(); ++lm_it) {
-      cout << *lm_it << "\n";
-
-      }*/
-
-    /* vigra::MultiArray<2, unsigned> relabelll(shape_general);
-    relabelll *= 0;
-    cout << find_lineage_by_o_id(lineage_vec, 2) << "\n";
-    relabel_image<2>(base_img, relabelll, 2, 50);
-    exportImage(srcImageRange(relabelll), ImageExportInfo("relabel.tif")); */
+    // create the lineage trees from the events and print them to the stdout
+    isbi_pipeline::Lineage lineage(events);
+    std::cout << lineage;
 
     return 0;
   } catch (ArgumentError& e) {
