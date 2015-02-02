@@ -196,6 +196,8 @@ std::vector<std::vector<pgmlink::Event> > track(pgmlink::TraxelStore& ts, std::m
     options["min_angle"],   // min angle
     options["ep_gap"],      // ep_gap
     options["n_neighbors"], // n neighbors
+    true,                   // with divisions
+    1e+75,                  // cplex timeout
     false);                 // alternative builder
   return tracker(ts);
 }
