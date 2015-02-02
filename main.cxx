@@ -144,6 +144,8 @@ int main(int argc, char** argv) {
       back_inserter(fn_vec),
       tif_chooser);
     std::sort(fn_vec.begin(), fn_vec.end());
+    // initialize vector of label images
+    std::vector<std::string> labelimage_fn_vec;
     // create the feature and segmentation calculator
     boost::shared_ptr<isbi_pipeline::FeatureCalculator<2> > feature_calc_ptr(
       new isbi_pipeline::FeatureCalculator<2>(feature_list));
@@ -179,15 +181,18 @@ int main(int argc, char** argv) {
       // save the segmentation results
       std::stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str << "_RES/"
-        << "segmentation" << zero_padding(timestep, 2);
-      std::cout << "Save results to " << segmentation_result_path.str() + ".h5"
+        << "segmentation" << zero_padding(timestep, 3) << ".h5";
+      std::cout << "Save results to " << segmentation_result_path.str()
         << std::endl;
-      segmentation.export_hdf5(segmentation_result_path.str() + ".h5");
-      std::cout << "Save results to " << segmentation_result_path.str() + ".tif"
-        << std::endl;
+      segmentation.export_hdf5(segmentation_result_path.str());
+      std::stringstream labelimage_path;
+      labelimage_path << tif_dir_str << "_RES/mask"
+        << zero_padding(timestep, 3) << ".tif";
+      std::cout << "Save results to " << labelimage_path.str() << std::endl;
       vigra::exportImage(
         vigra::srcImageRange(UShortMatrixType(segmentation.label_image_)),
-        vigra::ImageExportInfo((segmentation_result_path.str()+".tif").c_str()));
+        vigra::ImageExportInfo(labelimage_path.str().c_str()));
+      labelimage_fn_vec.push_back(labelimage_path.str());
       // create traxels and add them to the traxelstore
       traxel_extractor.extract(segmentation, timestep, ts);
     }
@@ -204,6 +209,27 @@ int main(int argc, char** argv) {
     // create the lineage trees from the events and print them to the stdout
     isbi_pipeline::Lineage lineage(events);
     std::cout << lineage;
+    timestep = 0;
+    for (
+      std::vector<std::string>::iterator fn_it = labelimage_fn_vec.begin();
+      fn_it != labelimage_fn_vec.end();
+      fn_it++, timestep++ )
+    {
+      // read the image
+      vigra::ImageImportInfo import_info(fn_it->c_str());
+      vigra::Shape2 shape(import_info.width(), import_info.height());
+      // initialize the multi array
+      UIntMatrixType labelimage(shape);
+      // read the image pixel data
+      vigra::importImage(import_info, vigra::destImage(labelimage));
+      // relabel the label image
+      lineage.relabel<2>(labelimage, timestep);
+      // save results
+      std::cout << "Save results to " << *fn_it << std::endl;
+      vigra::exportImage(
+        vigra::srcImageRange(UShortMatrixType(labelimage)),
+        vigra::ImageExportInfo(fn_it->c_str()));
+    }
 
     return 0;
   } catch (ArgumentError& e) {
