@@ -462,7 +462,7 @@ template<int N>
 int TraxelExtractor<N>::extract(
   const Segmentation<N>& segmentation,
   const int timestep,
-  pgmlink::TraxelStore traxelstore) const
+  pgmlink::TraxelStore& traxelstore) const
 {
   LOG("Extract traxel");
   int return_status = 0;
@@ -485,7 +485,7 @@ int TraxelExtractor<N>::extract_for_label(
   const AccChainType& acc_chain,
   const size_t label_id,
   const int timestep,
-  pgmlink::TraxelStore traxelstore) const
+  pgmlink::TraxelStore& traxelstore) const
 {
   // TODO border filter
   typedef vigra::acc::Coord<vigra::acc::Mean> CoordMeanType;

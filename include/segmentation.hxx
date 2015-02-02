@@ -112,13 +112,13 @@ class TraxelExtractor {
   int extract(
     const Segmentation<N>& segmentation,
     const int timestep,
-    pgmlink::TraxelStore traxelstore) const;
+    pgmlink::TraxelStore& traxelstore) const;
  private:
   int extract_for_label(
     const AccChainType& acc_chain,
     const size_t label_id,
     const int timestep,
-    pgmlink::TraxelStore traxelstore) const;
+    pgmlink::TraxelStore& traxelstore) const;
   unsigned int border_distance_;
   unsigned int lower_size_lim_;
   unsigned int upper_size_lim_;
