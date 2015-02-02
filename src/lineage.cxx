@@ -40,15 +40,15 @@ void Lineage::handle_appearance(
   const pgmlink::Event& event,
   const int timestep)
 {
-  TraxelIndexType traxel_index(timestep + 1, event.traxel_ids[0]);
+  TraxelIndexType traxel_index(timestep, event.traxel_ids[0]);
   // start a new track for this traxel index
   start_track(traxel_index);
 }
 
 void Lineage::handle_move(const pgmlink::Event& event, const int timestep) {
   // create the traxel index for the child and parent traxel
-  TraxelIndexType parent_index(timestep, event.traxel_ids[0]);
-  TraxelIndexType child_index(timestep + 1, event.traxel_ids[1]);
+  TraxelIndexType parent_index(timestep - 1, event.traxel_ids[0]);
+  TraxelIndexType child_index(timestep, event.traxel_ids[1]);
   // check if there already exists a track
   TraxelTrackIndexMapType::const_iterator track_it = traxel_track_map_.find(
     parent_index);
@@ -65,9 +65,18 @@ void Lineage::handle_move(const pgmlink::Event& event, const int timestep) {
 }
 
 void Lineage::handle_division(const pgmlink::Event& event, const int timestep) {
-  TraxelIndexType parent_index(timestep, event.traxel_ids[0]);
-  TraxelIndexType lchild_index(timestep + 1, event.traxel_ids[1]);
-  TraxelIndexType rchild_index(timestep + 1, event.traxel_ids[2]);
+  TraxelIndexType parent_index(timestep - 1, event.traxel_ids[0]);
+  TraxelIndexType lchild_index(timestep, event.traxel_ids[1]);
+  TraxelIndexType rchild_index(timestep, event.traxel_ids[2]);
+  // check if there already exists a parent track
+  TraxelTrackIndexMapType::const_iterator track_it = traxel_track_map_.find(
+    parent_index);
+  // start a new track if no parent exists
+  if (track_it == traxel_track_map_.end()) {
+    std::cout << "No parent track found for division at timstep "
+      << timestep << std::endl;
+    start_track(parent_index);
+  }
   // start the new tracks and set the parent map correctly
   start_track(lchild_index, traxel_track_map_[parent_index]);
   start_track(rchild_index, traxel_track_map_[parent_index]);
