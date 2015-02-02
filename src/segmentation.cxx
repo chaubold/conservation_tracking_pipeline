@@ -500,6 +500,9 @@ int TraxelExtractor<N>::extract_for_label(
     std::vector<float> com(
       vigra::acc::get<CoordMeanType>(acc_chain, label_id).begin(),
       vigra::acc::get<CoordMeanType>(acc_chain, label_id).end());
+    if (N == 2) {
+      com.push_back(0.0);
+    }
     // fill the feature map
     pgmlink::FeatureMap feature_map;
     feature_map["com"] = com;
