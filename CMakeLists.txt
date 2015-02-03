@@ -55,5 +55,5 @@ TARGET_LINK_LIBRARIES(isbi_pipeline pipeline_helpers ${PGMLINK_LIBRARIES} ${VIGR
 ADD_EXECUTABLE(h5_tracking h5_tracking.cxx)
 TARGET_LINK_LIBRARIES(h5_tracking pipeline_helpers ${PGMLINK_LIBRARIES} ${VIGRA_IMPEX_LIBRARY} ${Boost_LIBRARIES})
 
-ADD_EXECUTABLE(isbi_pipeline3d main3D.cxx)
-TARGET_LINK_LIBRARIES(isbi_pipeline3d pipeline_helpers ${PGMLINK_LIBRARIES} ${VIGRA_IMPEX_LIBRARY} ${Boost_LIBRARIES})
+# ADD_EXECUTABLE(isbi_pipeline3d main3D.cxx)
+# TARGET_LINK_LIBRARIES(isbi_pipeline3d pipeline_helpers ${PGMLINK_LIBRARIES} ${VIGRA_IMPEX_LIBRARY} ${Boost_LIBRARIES})

@@ -1,14 +1,14 @@
+/* TODO
+ * do label image calculations with unsigned short?
+ */
+
 // stl
-#include <exception>
 #include <stdexcept>
 #include <iostream>
 #include <string>
 #include <vector>
 #include <utility>
-#include <fstream>
 #include <map>
-#include <algorithm>
-#include <cmath>
 #include <sstream>
 #include <utility>
 
@@ -20,12 +20,8 @@
 // vigra
 #include <vigra/impex.hxx>
 #include <vigra/hdf5impex.hxx>
-#include <vigra/random_forest_hdf5_impex.hxx>
 #include <vigra/multi_array.hxx>
 #include <vigra/random_forest.hxx>
-#include <vigra/multi_convolution.hxx>
-#include <vigra/labelimage.hxx>
-#include <vigra/accessor.hxx>
 
 // pgmlink
 #include <pgmlink/traxels.h>
@@ -39,45 +35,34 @@
 
 // Aliases for convenience
 namespace fs = boost::filesystem;
+namespace isbi = isbi_pipeline;
 
 // Typedefs for convenience
-// TODO Move some to pipeline_helpers eg. EventVector
-//
 // Scalar types
-typedef FeatureType DataType;
+typedef isbi::FeatureType DataType;
 // Container types of the standard library
 typedef std::vector<std::pair<std::string, double> > StringDoublePairVectorType;
 typedef std::map<std::string, double> StringDoubleMapType;
 // Vigra MultiArray types
 typedef vigra::MultiArray<2, DataType> DataMatrixType;
-typedef vigra::MultiArray<2, FeatureType> FeatureMatrixType;
 typedef vigra::MultiArray<2, unsigned> UIntMatrixType;
 typedef vigra::MultiArray<2, unsigned short> UShortMatrixType;
 // Further vigra types
 typedef vigra::RandomForest<unsigned> RandomForestType;
-// Container types of the standard library with vigra types
-// TODO Refactor feature calculation without awkward FeatureStorageType
-typedef std::vector<std::vector<FeatureMatrixType> > FeatureStorageType;
-// Container types of the standard library with pgmlink types
-typedef std::vector<pgmlink::Event> EventVectorType;
-typedef std::vector<EventVectorType> EventVectorVectorType;
 
 int main(int argc, char** argv) {
-  // arg 1: dataset folder
   try {
     // check for correct number of arguments
     if (argc < 6) {
-      throw ArgumentError();
+      throw isbi::ArgumentError();
     }
-    // TODO what about presmoothing?
-    // bool presmoothing = true;
 
     // dataset variables
-    rstrip(argv[1], '/');
-    rstrip(argv[2], '/');
-    rstrip(argv[3], '/');
-    rstrip(argv[4], '/');
-    rstrip(argv[5], '/');
+    isbi::rstrip(argv[1], '/');
+    isbi::rstrip(argv[2], '/');
+    isbi::rstrip(argv[3], '/');
+    isbi::rstrip(argv[4], '/');
+    isbi::rstrip(argv[5], '/');
     std::string dataset_folder(argv[1]);
     std::string dataset_sequence(argv[2]);
     std::string tif_dir_str(dataset_folder + "/" + dataset_sequence);
@@ -105,25 +90,27 @@ int main(int argc, char** argv) {
 
     // make unary for copying only filepaths that contain *.tif
     boost::function<bool (fs::directory_entry&)> tif_chooser = bind(
-      contains_substring_boost_path, _1, ".tif");
+      isbi::contains_substring_boost_path, _1, ".tif");
 
     // load segmentation classifier
     std::vector<RandomForestType> rfs;
-    if (!get_rfs_from_file(rfs, rf_file_path)) {
+    if (!(isbi::get_rfs_from_file(rfs, rf_file_path))) {
       throw std::runtime_error("Could not load Random Forest classifier!");
     }
 
     // get features used in project
     std::string feature_list_path = dataset_folder + "/features.txt";
     StringDoublePairVectorType feature_list;
-    int read_status = read_features_from_file(feature_file_path, feature_list);
+    int read_status = isbi::read_features_from_file(
+      feature_file_path,
+      feature_list);
     if (read_status == 1) {
       throw std::runtime_error("Could not open file " + feature_list_path);
     }
 
     // get config
     StringDoubleMapType options;
-    int config_status = read_config_from_file(config_file_path, options);
+    int config_status = isbi::read_config_from_file(config_file_path, options);
     if (config_status == 1) {
       throw std::runtime_error("Could not open file " + config_file_path);
     }
@@ -138,20 +125,20 @@ int main(int argc, char** argv) {
     pgmlink::TraxelStore ts;
     // sort filenames
     std::vector<fs::path> fn_vec;
-    copy_if_own(
+    isbi::copy_if_own(
       fs::directory_iterator(tif_dir),
       fs::directory_iterator(),
-      back_inserter(fn_vec),
+      std::back_inserter(fn_vec),
       tif_chooser);
     std::sort(fn_vec.begin(), fn_vec.end());
     // initialize vector of label images
     std::vector<std::string> labelimage_fn_vec;
     // create the feature and segmentation calculator
-    boost::shared_ptr<isbi_pipeline::FeatureCalculator<2> > feature_calc_ptr(
-      new isbi_pipeline::FeatureCalculator<2>(feature_list));
-    isbi_pipeline::SegmentationCalculator<2> seg_calc(feature_calc_ptr, rfs);
+    boost::shared_ptr<isbi::FeatureCalculator<2> > feature_calc_ptr(
+      new isbi::FeatureCalculator<2>(feature_list));
+    isbi::SegmentationCalculator<2> seg_calc(feature_calc_ptr, rfs);
     // create the traxel extractor
-    isbi_pipeline::TraxelExtractor<2> traxel_extractor(0, 100, 0);
+    isbi::TraxelExtractor<2> traxel_extractor(0, 100, 0);
 
     // iterate over the filenames TODO timestep counting not correct
     for (
@@ -176,18 +163,18 @@ int main(int argc, char** argv) {
       // read the image pixel data
       vigra::importImage(info, vigra::destImage(src_unsmoothed));
       std::cout << "Calculate features" << std::endl;
-      isbi_pipeline::Segmentation<2> segmentation;
+      isbi::Segmentation<2> segmentation;
       seg_calc.calculate(src_unsmoothed, segmentation);
       // save the segmentation results
       std::stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str << "_RES/"
-        << "segmentation" << zero_padding(timestep, 3) << ".h5";
+        << "segmentation" << isbi::zero_padding(timestep, 3) << ".h5";
       std::cout << "Save results to " << segmentation_result_path.str()
         << std::endl;
       segmentation.export_hdf5(segmentation_result_path.str());
       std::stringstream labelimage_path;
       labelimage_path << tif_dir_str << "_RES/mask"
-        << zero_padding(timestep, 3) << ".tif";
+        << isbi::zero_padding(timestep, 3) << ".tif";
       std::cout << "Save results to " << labelimage_path.str() << std::endl;
       vigra::exportImage(
         vigra::srcImageRange(UShortMatrixType(segmentation.label_image_)),
@@ -201,13 +188,13 @@ int main(int argc, char** argv) {
     //=========================================================================
     // track!
     //=========================================================================
-    EventVectorVectorType events = track(ts, options);
+    isbi::EventVectorVectorType events = isbi::track(ts, options);
 
     //=========================================================================
     // handle results
     //=========================================================================
     // create the lineage trees from the events and print them to the stdout
-    isbi_pipeline::Lineage lineage(events);
+    isbi::Lineage lineage(events);
     std::cout << lineage;
     timestep = 0;
     for (
@@ -232,7 +219,7 @@ int main(int argc, char** argv) {
     }
 
     return 0;
-  } catch (ArgumentError& e) {
+  } catch (isbi::ArgumentError& e) {
     std::cout << e.what();
     std::cout << "Usage: " << argv[0]
       << " folder sequence config_path rf_path feature_path" << std::endl;

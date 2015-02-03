@@ -3,43 +3,26 @@
 
 //stl
 #include <string>
-#include <sstream>
-#include <iomanip>
-#include <fstream>
 #include <vector>
 #include <utility>
-#include <stdexcept>
+#include <exception>
 #include <map>
-#include <algorithm>
-#include <set>
-#include <functional>
 
 // vigra
-#include <vigra/multi_array.hxx>
-#include <vigra/convolution.hxx>
-#include <vigra/multi_convolution.hxx>
-#include <vigra/tinyvector.hxx>
-#include <vigra/functorexpression.hxx>
-#include <vigra/multi_tensorutilities.hxx>
-#include <vigra/multi_iterator_coupled.hxx>
-#include <vigra/multi_iterator.hxx>
-#include <vigra/accessor.hxx>
-
-// pgmlink
-#include <pgmlink/traxels.h>
-#include <pgmlink/tracking.h>
+#include <vigra/random_forest.hxx>
 
 // boost
-#include <boost/tokenizer.hpp>
 #include <boost/filesystem.hpp>
 
+// pgmlink
+#include <pgmlink/tracking.h>
+#include <pgmlink/traxels.h>
 
+namespace isbi_pipeline {
 
 typedef float FeatureType;
-typedef vigra::MultiArray<3, FeatureType> feature_image;
-typedef vigra::CoupledIteratorType<2, unsigned, unsigned>::type label_img_iterator;
-typedef std::vector<long unsigned> event_array;
-
+typedef std::vector<pgmlink::Event> EventVectorType;
+typedef std::vector<EventVectorType> EventVectorVectorType;
 
 // ArgumentError class
 class ArgumentError : public std::exception {
@@ -48,49 +31,9 @@ public:
 };
 
 
-// Lineage class  -- to be implemented!
-struct Lineage {
-  // lineage id
-  int id_;
-  // time of first appearance of lineage
-  int t_start_;
-  // time of disappearance of lineage
-  int t_end_;
-  // parent lineage
-  int parent_;
-  // object id in latest timestep
-  int o_id_;
-
-  // constructor providing all arguments
-  Lineage(int id=0, int t_start=0, int t_end=0, int parent=0, int o_id=0);
-
-  // overloading comparison operator
-  friend bool operator<(const Lineage& lhs, const Lineage& rhs);
-  friend bool operator==(const Lineage& lhs, const int& rhs);
-
-  // overloading operator<<
-  //friend std::stringstream& operator<<(std::stringstream& ss, const Lineage& lin);
-  //friend std::ostream& operator<<(std::ostream& os, const Lineage& lin);
-
-
-private:
-  //default constructor
-  // Lineage();
-  
-};
-
-//std::stringstream& operator<<(std::stringstream& ss, const Lineage& lin);
-std::ostream& operator<<(std::ostream& os, const Lineage& lin);
-
-
 // strip trailing slash
 // works only for null terminated cstrings
 void rstrip(char* c, char r);
-
-
-// remap image to [0,255]
-template <typename T, int N>
-void remap(vigra::MultiArray<N, T>& src);
 
 
 // zero padding int to string
@@ -101,10 +44,6 @@ std::string zero_padding(int num, int n_zeros);
 int read_features_from_file(std::string path, std::vector<std::pair<std::string, double> >& features);
 
 
-// lookup the size of given feature
-int feature_dim_lookup_size(std::string feature);
-
-
 // get random_forests from file
 bool get_rfs_from_file(std::vector<vigra::RandomForest<unsigned> >& rfs,
                        std::string fn,
@@ -113,133 +52,12 @@ bool get_rfs_from_file(std::vector<vigra::RandomForest<unsigned> >& rfs,
                        int n_leading_zeros = 4);
 
 
-
-// set all pixels of component to specified value
-template <int N>
-void set_pixels_of_cc_to_value(vigra::MultiArrayView<N, unsigned> image, unsigned id, unsigned value);
-
-
-// mark candidates for deletion
-template <int N>
-void collect_candidates_to_delete(vigra::MultiArrayView<N, unsigned> image, std::map<unsigned, bool>& candidates_to_delete, unsigned border_width);
-
-
-// save candidates falsely marked for deletion
-template <int N>
-void save_false_candidates(vigra::MultiArrayView<N, unsigned> image, std::map<unsigned, bool>& candidates_to_delete, unsigned border_width);
-
-
-// ignore connected components that do not lie within frame
-template <int N>
-void ignore_border_cc(vigra::MultiArrayView<N, unsigned> image, unsigned border_with = 0);
-
-
-// ilastik pixelclassification style difference of gaussians
-template <int N>
-void differenceOfGaussians(const vigra::MultiArray<N, FeatureType>& src, vigra::MultiArray<N, FeatureType>& dest, double scale0, double scale1, vigra::ConvolutionOptions<N> opt);
-
-
-// gaussianGradientMagnitude for MultiArrays
-template <int N>
-void gaussianGradientMagnitudeOwn(const vigra::MultiArray<N, FeatureType>& src, vigra::MultiArray<N, FeatureType>& dest, double scale, vigra::ConvolutionOptions<N> opt);
-
-
-// structureTensorEigenvalues for vector<MultiArray> instead of MultiArray<N, TinyVector>
-template <int N>
-void structureTensorEigenValuesOwn(const vigra::MultiArray<N, FeatureType>& src, std::vector<vigra::MultiArray<N, FeatureType> >& dest, double inner_scale, double outer_scale, vigra::ConvolutionOptions<N> opt);
-
-
-// hessianOfGaussianEigenvalues for vector<MultiArray> instead of MultiArray<N, TinyVector>
-template <int N>
-void hessianOfGaussianEigenvaluesOwn(const vigra::MultiArray<N, FeatureType>& src, std::vector<vigra::MultiArray<N, FeatureType> >& dest, double scale, vigra::ConvolutionOptions<N> opt);
-
-
-// MultiArray<N, TinyVector<T, U> > to vector<MultiArray<N, T> >
-template <int N, class T, int U>
-void multi_array_of_tiny_vec_to_vec_of_multi_array(const vigra::MultiArray<N, vigra::TinyVector<T, U> >& src,
-						   std::vector<vigra::MultiArray<N, T> >& dest);
-
-
-// get features from string storing in vector of MultiArrays
-template <int N>
-int get_features(const vigra::MultiArray<N, FeatureType>& src, std::vector<vigra::MultiArray<N, FeatureType> >& dest, std::string feature, double scale, double window_size = 2.0);
-
-
-// get features from string storing in MultiArray with Dim+1
-template <int N>
-int get_features(const vigra::MultiArray<N, FeatureType>& src, vigra::MultiArrayView<N+1, FeatureType> dest, std::string feature, double scale, int pos_in_res_array, double window_size = 2.0);
-
-
-// extract number from string
-double string_to_double(std::string str);
-
-
 // read config from file (such as renormalization parameters,...)
 int read_config_from_file(const std::string& path, std::map<std::string, double>& options);
 
 
-// renormalize multiarray to 8bit
-template <int N, class T>
-void renormalize_to_8bit(vigra::MultiArrayView<N, T>& array, double min, double max);
-
-
 // do the tracking
-std::vector<std::vector<pgmlink::Event> > track(pgmlink::TraxelStore& ts, std::map<std::string, double> options);
-
-
-// find lineage by object id
-// Returns max index + 1 if not in array -> TODO enforces array out of index errors
-int find_lineage_by_o_id(const std::vector<Lineage>& lineage_vec, int o_id);
-
-
-// initialize lineages from first image
-template <int N>
-int initialize_lineages(std::vector<Lineage>& lineage_vec, vigra::MultiArrayView<N, unsigned> img, unsigned t_start = 0);
-
-
-// close lineages that have t_end_ == -1
-void close_open_lineages(std::vector<Lineage>& lineage_vec, int t_end);
-
-
-// relabel image based on lineage
-template<int N>
-void relabel_image(const vigra::MultiArrayView<N, unsigned> labels_orig, vigra::MultiArrayView<N, unsigned> labels_new, int object_id, int lineage_id);
-
-
-// edit lineages according to move
-int handle_move(std::vector<Lineage>& lineage_vec, std::vector<std::pair<unsigned, int> >& lineages_to_be_relabeled, const event_array& move);
-
-
-// edit lineages according to split
-int handle_split(std::vector<Lineage>& lineage_vec, std::vector<std::pair<unsigned, int> >& lineages_to_be_relabeled, const event_array& split, int timestep, int& max_l_id);
-
-
-// edit lineages according to disappearance
-int handle_disappearance(std::vector<Lineage>& lineage_vec, const event_array& disappearance, int timestep);
-
-
-// edit lineages according to appearance
-int handle_appearance(std::vector<Lineage>& lineage_vec, std::vector<std::pair<unsigned, int> >& lineages_to_be_relabeled, const event_array& appearance, int timestep, int& max_l_id);
-
-
-// handle timestep
-template <int N>
-void handle_timestep(const std::vector<pgmlink::Event>& events, std::vector<Lineage>& lineave_vec, const vigra::MultiArrayView<N, unsigned> labels_orig, vigra::MultiArrayView<N, unsigned> labels_new, int timestep, int& max_l_id);
-
-
-// iterate over timesteps and handle every timestep
-template <int N>
-void transform_events(const std::vector<std::vector<pgmlink::Event> >& events_vec,
-                      std::vector<boost::filesystem::path>::iterator dir_it,
-                      std::vector<boost::filesystem::path>::iterator end_it,
-                      std::vector<Lineage>& lineage_vec,
-                      typename vigra::MultiArrayShape<N>::type shape,
-                      int max_l_id,
-                      int timestep = 1);
-
-
-// write lineages to text file
-int write_lineages(const std::vector<Lineage>& lineage_vec, std::string filename);
+EventVectorVectorType track(pgmlink::TraxelStore& ts, std::map<std::string, double> options);
 
 
 // helper function to iterate over tif only
@@ -255,345 +73,9 @@ template <class InputIterator, class OutputIterator, class UnaryPredicate>
 OutputIterator copy_if_own (InputIterator first, InputIterator last, OutputIterator result, UnaryPredicate pred);
 
 
-
-
-
 /* -------------------------------------------------- */
 /*                   IMPLEMENTATION                   */
 /* -------------------------------------------------- */
-
-
-template <typename T, int N>
-void remap(vigra::MultiArray<N, T>& src) {
-  T max_value = *vigra::argMax(src.begin(), src.end());
-  if (!(max_value > 255)) return;
-  T min_value = *vigra::argMin(src.begin(), src.end());
-  T range = max_value - min_value;
-  typename vigra::MultiArray<N, T>::iterator it = src.begin();
-  for (; it != src.end(); ++it) {
-    *it = 255*(*it - min_value)/(range);
-  }
-}
-
-
-template <int N>
-void set_pixels_of_cc_to_value(vigra::MultiArrayView<N, unsigned> image, unsigned id, unsigned value) {
-  std::replace_if(image.begin(), image.end(), std::bind1st(std::equal_to<unsigned>(), id), value);
-}
-
-
-template <int N>
-void collect_candidates_to_delete(vigra::MultiArrayView<N, unsigned> image, std::map<unsigned, bool>& candidates_to_delete, unsigned border_width) {
-  for (int dim = 0; dim < N; ++dim) {
-    int length_of_dim = image.shape()[dim];
-    for (unsigned off = 0; off < border_width; ++off) {
-
-      // check lower border
-      vigra::MultiArrayView<N-1, unsigned, vigra::StridedArrayTag> slice = image.bindAt(dim, off);
-      typename::vigra::MultiArrayView<N-1, unsigned>::iterator slice_it = slice.begin();
-      for (; slice_it != slice.end(); ++slice_it) {
-        if (*slice_it > 0) {
-          candidates_to_delete[*slice_it] = true;
-        }
-      }
-
-      // check upper border
-      vigra::MultiArrayView<N-1, unsigned, vigra::StridedArrayTag> slice2 = image.bindAt(dim, length_of_dim - off - 1);
-      slice_it = slice2.begin();
-      for(; slice_it != slice2.end(); ++slice_it) {
-        if (*slice_it > 0) {
-          candidates_to_delete[*slice_it] = true;
-        }
-      }
-    }
-  }
-}
-
-
-template <int N>
-void save_false_candidates(vigra::MultiArrayView<N, unsigned> image, std::map<unsigned, bool>& candidates_to_delete, unsigned border_width) {
-  typename vigra::MultiArrayShape<N>::type inner_shape_0(border_width);
-  typename vigra::MultiArrayShape<N>::type inner_shape_1(border_width);
-  typename vigra::MultiArrayShape<N>::type shape = image.shape();
-  std::transform(shape.begin(), shape.end(), inner_shape_1.begin(), inner_shape_1.begin(), std::minus<int>());
-  vigra::MultiArrayView<N, unsigned> inner = image.subarray(inner_shape_0, inner_shape_1);
-  for (int dim = 0; dim < N; ++dim) {
-    int length_of_dim = inner.shape()[dim];
-
-    // check lower border
-    vigra::MultiArrayView<N-1, unsigned, vigra::StridedArrayTag> slice = inner.bindAt(dim, 0);
-    typename::vigra::MultiArrayView<N-1, unsigned>::iterator slice_it = slice.begin();
-    for (; slice_it != slice.end(); ++slice_it) {
-      if (*slice_it > 0) {
-        candidates_to_delete[*slice_it] = false;
-      }
-    }
-
-    // check upper border
-    vigra::MultiArrayView<N-1, unsigned, vigra::StridedArrayTag> slice2 = inner.bindAt(dim, length_of_dim-1);
-    slice_it = slice2.begin();
-    for (; slice_it != slice2.end(); ++slice_it) {
-      if (*slice_it > 0) {
-        candidates_to_delete[*slice_it] = false;
-      }
-    }
-
-  }
-}
-
-
-template <int N>
-void ignore_border_cc(vigra::MultiArrayView<N, unsigned> image, unsigned border_width) {
-  std::map<unsigned, bool> candidates_to_delete;
-  collect_candidates_to_delete<N>(image, candidates_to_delete, border_width);
-  save_false_candidates<N>(image, candidates_to_delete, border_width);
-  
-  std::map<unsigned, bool>::iterator it = candidates_to_delete.begin();
-  for (; it != candidates_to_delete.end(); ++it) {
-    if (it->second) {
-      set_pixels_of_cc_to_value<N>(image, it->first, 0);
-    }
-  }
-}
-
-
-
-template <int N>
-void differenceOfGaussians(const vigra::MultiArray<N, FeatureType>& src, vigra::MultiArray<N, FeatureType>& dest, double scale0, double scale1, vigra::ConvolutionOptions<N> opt) {
-  vigra::MultiArray<N, FeatureType> tmp(src.shape());
-  vigra::gaussianSmoothMultiArray(srcMultiArrayRange(src), destMultiArray(dest), scale0, opt);
-  vigra::gaussianSmoothMultiArray(srcMultiArrayRange(src), destMultiArray(tmp), scale1, opt);
-  dest -= tmp;
-}
-
-
-template <int N>
-void gaussianGradientMagnitudeOwn(const vigra::MultiArray<N, FeatureType>& src, vigra::MultiArray<N, FeatureType>& dest, double scale, vigra::ConvolutionOptions<N> opt) {
-  vigra::MultiArray<N, vigra::TinyVector<FeatureType, N> > tmp(src.shape());
-  vigra::gaussianGradientMultiArray(srcMultiArrayRange(src), destMultiArray(tmp), scale, opt);
-  if (N == 2)
-    vigra::combineTwoMultiArrays(srcMultiArrayRange(tmp),
-				 srcMultiArray(dest),
-				 destMultiArray(dest),
-				 vigra::functor::squaredNorm(vigra::functor::Arg1()));
-  else
-    throw std::runtime_error("gaussianGradientMagnitude only implemented for N == 2 and N == 3");
-  vigra::transformMultiArray(srcMultiArrayRange(dest),
-			     destMultiArray(dest),
-			     vigra::functor::sqrt(vigra::functor::Arg1()));
-  
-}
-
-
-template <int N>
-void structureTensorEigenvaluesOwn(const vigra::MultiArray<N, FeatureType>& src, std::vector<vigra::MultiArray<N, FeatureType> >& dest, double inner_scale, double outer_scale, vigra::ConvolutionOptions<N> opt) {
-  vigra::MultiArray<N, vigra::TinyVector<FeatureType, (N*(N+1))/2> > tmp1(src.shape());
-  vigra::MultiArray<N, vigra::TinyVector<FeatureType, N> > tmp2(src.shape());
-  vigra::structureTensorMultiArray(srcMultiArrayRange(src), destMultiArray(tmp1), inner_scale, outer_scale, opt);
-  vigra::tensorEigenvaluesMultiArray(srcMultiArrayRange(tmp1), destMultiArray(tmp2));
-  multi_array_of_tiny_vec_to_vec_of_multi_array<N, FeatureType, N>(tmp2, dest);
-}
-
-
-template <int N>
-void hessianOfGaussianEigenvaluesOwn(const vigra::MultiArray<N, FeatureType>& src, std::vector<vigra::MultiArray<N, FeatureType> >& dest, double scale, vigra::ConvolutionOptions<N> opt) {
-  vigra::MultiArray<N, vigra::TinyVector<FeatureType, (N*(N+1))/2> > tmp1(src.shape());
-  vigra::MultiArray<N, vigra::TinyVector<FeatureType, N> > tmp2(src.shape());
-  vigra::hessianOfGaussianMultiArray(srcMultiArrayRange(src), destMultiArray(tmp1), scale, opt);
-  vigra::tensorEigenvaluesMultiArray(srcMultiArrayRange(tmp1), destMultiArray(tmp2));
-  multi_array_of_tiny_vec_to_vec_of_multi_array<N, FeatureType, N>(tmp2, dest);
-}
-
-
-template <int N, class T, int U>
-void multi_array_of_tiny_vec_to_vec_of_multi_array(const vigra::MultiArray<N, vigra::TinyVector<T, U> >& src,
-						   std::vector<vigra::MultiArray<N, T> >& dest) {
-  vigra::MultiArrayView<N+1, T, vigra::StridedArrayTag> tmp = src.expandElements(N);
-  for (int i = 0; i < U; ++i) {
-    dest.push_back(tmp.bindOuter(i));
-  }
-  //vigra::combineTwoMultiArrays(srcMultiArrayRange(src), srcMultiArray(dest), destMultiArray(dest),
-}
-
-
-template <int N>
-int get_features(const vigra::MultiArray<N, FeatureType>& src, std::vector<vigra::MultiArray<N, FeatureType> >& dest, std::string feature, double scale, double window_size) {
-  if (dest.size()) return 2;
-  vigra::ConvolutionOptions<N> opt;
-  opt.filterWindowSize(window_size);
-  if (!feature.compare("GaussianSmoothing")) {
-    dest.push_back(vigra::MultiArray<N, FeatureType>(src.shape()));
-    vigra::gaussianSmoothMultiArray(srcMultiArrayRange(src), destMultiArray(dest[0]), scale, opt);
-  } else if (!feature.compare("LaplacianOfGaussians")) {
-    dest.push_back(vigra::MultiArray<N, FeatureType>(src.shape()));
-    vigra::laplacianOfGaussianMultiArray(srcMultiArrayRange(src), destMultiArray(dest[0]), scale, opt);
-  } else if (!feature.compare("StructureTensorEigenvalues")) {
-    structureTensorEigenvaluesOwn<N>(src, dest, scale, 0.5*scale, opt);
-  } else if (!feature.compare("HessianOfGaussianEigenvalues")) {
-    hessianOfGaussianEigenvaluesOwn<N>(src, dest, scale, opt);
-  } else if (!feature.compare("GaussianGradientMagnitude")) {
-    dest.push_back(vigra::MultiArray<N, FeatureType>(src.shape()));
-    gaussianGradientMagnitudeOwn<N>(src, dest[0], scale, opt);
-  } else if (!feature.compare("DifferenceOfGaussians")) {
-    dest.push_back(vigra::MultiArray<N, FeatureType>(src.shape()));
-    differenceOfGaussians<N>(src, dest[0], scale, 0.66*scale, opt);
-  } else return 1;
-  return 0;			     
-}
-
-
-template <int N>
-int get_features(const vigra::MultiArray<N, FeatureType>& src, vigra::MultiArrayView<N+1, FeatureType>& dest, std::string feature, double scale, double window_size) {
-  vigra::ConvolutionOptions<N> opt;
-  opt.filterWindowSize(window_size);
-  if (feature.compare("GaussianSmoothing") == 0) {
-    vigra::gaussianSmoothMultiArray(srcMultiArrayRange(src), destMultiArray(dest.bindOuter(0)), scale, opt);
-  } else if (feature.compare("LaplacianOfGaussians") == 0) {
-    vigra::laplacianOfGaussianMultiArray(srcMultiArrayRange(src), destMultiArray(dest.bindOuter(0)), scale, opt);
-  } else if (feature.compare("StructureTensorEigenvalues") == 0) {
-    return 1;
-  } else if (feature.compare("HessianOfGaussianEigenvalues") == 0) {
-    return 1;
-  } else if (feature.compare("GaussianGradientMagnitude") == 0) {
-    gaussianGradientMagnitudeOwn<N>(src, dest.binOuter(0), scale, opt);
-  } else if (feature.compare("DifferenceOfGaussians") == 0) {
-    differenceOfGaussians<N>(src, dest.bindOuter(0), scale, 0.66*scale, opt);
-  } else {
-    return 1;
-  }
-  return 0;
-}
-
-
-inline double string_to_double(std::string str) {
-  std::istringstream is(str);
-  double x;
-  if (!(is >> x))
-    throw std::runtime_error("Not convertable to double: " + str);
-  return x;
-}
-
-
-template <int N, class T>
-void renormalize_to_8bit(vigra::MultiArrayView<N, T>& array, double min, double max) {
-  double range = (max - min);
-  double val;
-  typename vigra::MultiArrayView<N, T>::iterator it = array.begin();
-  for (; it != array.end(); ++it) {
-    val = 255.0*(*it - min)/range;
-    *it = static_cast<T>(std::min(std::max(val, 0.0), 255.0));
-  }
-}
-
-
-template <int N>
-int initialize_lineages(std::vector<Lineage>& lineage_vec, vigra::MultiArrayView<N, unsigned> img, unsigned t_start) {
-  if (lineage_vec.size() > 0) {
-    return -1;
-  }
-  std::set<unsigned> unique_labels(img.begin(), img.end());
-  for (std::set<unsigned>::iterator it = ++unique_labels.begin(); it != unique_labels.end(); ++it) {
-    int id = static_cast<int>(*it);
-    lineage_vec.push_back(Lineage(id, t_start, -1, 0, id));
-  }
-  // return maximum label
-  return *(--unique_labels.end()) + 1;
-}
-
-
-template<int N>
-void relabel_image(const vigra::MultiArrayView<N, unsigned> labels_orig, vigra::MultiArrayView<N, unsigned> labels_new, int object_id, int lineage_id) {
-  label_img_iterator start = createCoupledIterator(labels_orig, labels_new);
-  label_img_iterator end = start.getEndIterator();
-  for (; start != end; ++start) {
-    if (static_cast<int>(start.get<1>()) == object_id) {
-      start.get<2>() = lineage_id;
-    } else {
-      continue;
-    }
-  }
-  
-}
-
-template <class T>
-std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
-  os << "(";
-  for (typename std::vector<T>::const_iterator it = vec.begin(); it != vec.end(); ++it) {
-    os << *it << ",";
-  }
-  os << "\b)";
-  return os;
-}
-
-template <int N>
-void handle_timestep(const std::vector<pgmlink::Event>& events, std::vector<Lineage>& lineage_vec, const vigra::MultiArrayView<N, unsigned> labels_orig, vigra::MultiArrayView<N, unsigned> labels_new, int timestep, int& max_l_id) {
-  std::vector<std::pair<unsigned, int> > lineages_to_be_relabeled;
-  // take care of events and convert to lineages
-  for (std::vector<pgmlink::Event>::const_iterator event_it = events.begin(); event_it != events.end(); ++event_it) {
-    int handle_status = 0;
-    switch(event_it->type) {
-    case pgmlink::Event::Move:
-      handle_status = handle_move(lineage_vec, lineages_to_be_relabeled, event_it->traxel_ids);
-      break;
-    case pgmlink::Event::Division:
-      handle_status = handle_split(lineage_vec, lineages_to_be_relabeled, event_it->traxel_ids, timestep, max_l_id);
-      break;
-    case pgmlink::Event::Disappearance:
-      handle_status = handle_disappearance(lineage_vec, event_it->traxel_ids, timestep);
-      break;
-    case pgmlink::Event::Appearance:
-      handle_status = handle_appearance(lineage_vec, lineages_to_be_relabeled, event_it->traxel_ids, timestep, max_l_id);
-      break;
-    default:
-      break;
-    }
-    if (handle_status > 0) {
-      throw std::runtime_error("Could not handle event!");
-    }
-  }
-  std::cout << lineage_vec << "\n";
-  for(std::vector<Lineage>::const_iterator it_lin = lineage_vec.begin(); it_lin != lineage_vec.end(); ++it_lin) {
-    if (it_lin->o_id_ != -1) {
-      throw std::runtime_error("This is the guy!");
-    }
-  }
-  // relabel image
-  std::vector<std::pair<unsigned, int> >::iterator lin_it = lineages_to_be_relabeled.begin();
-  // std::cout << timestep << "\n";
-  for (; lin_it != lineages_to_be_relabeled.end(); ++lin_it) {
-    // std::cout << lin_it->second << "  " << lineage_vec[lin_it->first].id_ << "\n";
-    relabel_image<N>(labels_orig, labels_new, lin_it->second, lineage_vec[lin_it->first].id_);
-    lineage_vec[lin_it->first].o_id_ = lin_it->second;
-  }
-  // std::cout << "\n";
-}
-
-
-template <int N>
-  void transform_events(const std::vector<std::vector<pgmlink::Event> >& events_vec,
-                        std::vector<boost::filesystem::path>::iterator dir_it,
-                        std::vector<boost::filesystem::path>::iterator end_it,
-                        std::vector<Lineage>& lineage_vec,
-                        typename vigra::MultiArrayShape<N>::type shape,
-                        int max_l_id,
-                        int timestep) {
-  vigra::MultiArray<N, unsigned> labels_orig(shape);
-  vigra::MultiArray<N, unsigned> labels_new(shape);
-  if (static_cast<int>(events_vec.size()) != end_it - dir_it) {
-    throw std::runtime_error("Number of files and number of timesteps do not agree!");
-  }
-  std::vector<std::vector<pgmlink::Event> >::const_iterator events_it = events_vec.begin();
-  for (; events_it != events_vec.end(); ++events_it, ++timestep, ++dir_it) {
-    const char* filename = dir_it->string().c_str();
-    vigra::ImageImportInfo info(filename);
-    vigra::importImage(info, destImage(labels_orig));
-    labels_new *= 0;
-    handle_timestep<N>(*events_it, lineage_vec, labels_orig, labels_new, timestep, max_l_id);
-    // vigra::exportImage(srcImageRange(labels_new, vigra::StandardConstAccessor<short>()), vigra::ImageExportInfo(filename)); //.setPixelType("INT16"));
-    vigra::exportImage(srcImageRange(vigra::MultiArray<2, unsigned short>(labels_new)), vigra::ImageExportInfo(filename));
-  }
-  close_open_lineages(lineage_vec, timestep);
-}
 
 
 template <class InputIterator, class OutputIterator, class UnaryPredicate>
@@ -609,5 +91,6 @@ OutputIterator copy_if_own (InputIterator first, InputIterator last, OutputItera
   return result;
 }
 
+} // namespace isbi_pipeline
 
 #endif /* PIPELINE_HELPERS_HXX */
