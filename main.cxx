@@ -109,10 +109,9 @@ int main(int argc, char** argv) {
     }
 
     // get config
-    StringDoubleMapType options;
-    int config_status = isbi::read_config_from_file(config_file_path, options);
-    if (config_status == 1) {
-      throw std::runtime_error("Could not open file " + config_file_path);
+    isbi::TrackingOptions options(config_file_path);
+    if (!options.is_legal()) {
+      throw std::runtime_error("Bad options for tracking");
     }
 
     //=========================================================================
@@ -227,6 +226,7 @@ int main(int argc, char** argv) {
   } catch (std::runtime_error& e) {
     std::cout << "Program crashed:\n";
     std::cout << e.what();
+    std::cout << std::endl;
     return 0;
   }
 }

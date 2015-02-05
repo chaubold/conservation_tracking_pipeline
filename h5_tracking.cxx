@@ -79,10 +79,9 @@ int main(int argc, char** argv) {
       isbi::contains_substring_boost_path, _1, ".h5");
 
     // get config
-    StringDoubleMapType options;
-    int config_status = isbi::read_config_from_file(config_file_path, options);
-    if (config_status == 1) {
-      throw std::runtime_error("Could not open file " + config_file_path);
+    isbi::TrackingOptions options(config_file_path);
+    if(!options.is_legal()) {
+      throw std::runtime_error("Bad options for tracking");
     }
 
     //=========================================================================
@@ -157,12 +156,13 @@ int main(int argc, char** argv) {
 
   } catch (isbi::ArgumentError& e) {
     std::cout << e.what();
-    std::cout << "Usage: " << argv[0]
-      << " folder sequence config_path" << std::endl;
+    std::cout << "Usage: ";
+    std::cout << argv[0] << " folder sequence config_path" << std::endl;
     return 0;
   } catch (std::runtime_error& e) {
     std::cout << "Program crashed:\n";
     std::cout << e.what();
+    std::cout << std::endl;
     return 0;
   }
 }

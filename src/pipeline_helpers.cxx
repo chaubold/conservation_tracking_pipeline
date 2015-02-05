@@ -4,6 +4,8 @@
  */
 
 //stl
+#include <iostream>
+#include <fstream>
 #include <sstream>
 #include <iomanip>
 #include <vector>
@@ -14,11 +16,26 @@
 
 // boost
 #include <boost/tokenizer.hpp>
+#include <boost/lexical_cast.hpp>
 
 // own
 #include "pipeline_helpers.hxx"
 
 namespace isbi_pipeline {
+// local typdef
+typedef std::map<std::string, std::string> StringStringMapType;
+typedef StringStringMapType::const_iterator StringStringMapConstItType;
+
+// local functions
+template<typename T> bool convertible_to(const std::string& str) {
+  bool ret = true;
+  try {
+    static_cast<void>(boost::lexical_cast<T>(str));
+  } catch (const boost::bad_lexical_cast&) {
+    ret = false;
+  }
+  return ret;
+}
 
 ////
 //// ArgumentError
@@ -27,14 +44,131 @@ const char* ArgumentError::what() const throw() {
   return "Dataset folder and seqeunce not specified!\n";
 }
 
-/** @brief Convert a string to a double
- */
-inline double string_to_double(std::string str) {
-  std::istringstream is(str);
-  double x;
-  if (!(is >> x))
-    throw std::runtime_error("Not convertable to double: " + str);
-  return x;
+////
+//// class TrackingOptions
+////
+TrackingOptions::TrackingOptions(const std::string path) {
+  std::ifstream file(path.c_str());
+  if (!file.is_open()) {
+    std::runtime_error("Could not open file \"" + path + "\"");
+  }
+  typedef boost::tokenizer<boost::escaped_list_separator<char> > TokenizerType;
+  std::string line;
+  while(std::getline(file, line)) {
+    TokenizerType tokenizer(line);
+    options_map_[*tokenizer.begin()] = *(++tokenizer.begin());
+  }
+  file.close();
+}
+
+template<typename T>
+bool TrackingOptions::has_option(const std::string key) const {
+  StringStringMapConstItType it = options_map_.find(key);
+  if (it != options_map_.end()) {
+    return convertible_to<T>(it->second);
+  } else {
+    return false;
+  }
+}
+
+template<>
+bool TrackingOptions::has_option<std::string>(const std::string key) const {
+  return options_map_.count(key);
+}
+
+template<typename T>
+bool TrackingOptions::check_option(const std::string key) const {
+  if (has_option<T>(key)) {
+    return true;
+  } else {
+    std::cout << "Option \"" << key << "\" not legal" << std::endl;
+    return false;
+  }
+}
+
+template<typename T>
+T TrackingOptions::get_option(const std::string key) const {
+  StringStringMapConstItType it = options_map_.find(key);
+  if (it != options_map_.end()) {
+    return boost::lexical_cast<T>(it->second);
+  } else {
+    throw std::runtime_error("Option \"" + key + "\" not set");
+  }
+}
+
+template<>
+std::string TrackingOptions::get_option<std::string>(
+  const std::string key
+) const {
+  StringStringMapConstItType it = options_map_.find(key);
+  if (it != options_map_.end()) {
+    return it->second;
+  } else {
+    throw std::runtime_error("Option \"" + key + "\" not set");
+  }
+}
+
+bool TrackingOptions::is_legal() const {
+  bool ret = check_option<std::string>("tracker");
+  if (ret) {
+    const std::string tracker_type = get_option<std::string>("tracker");
+    // check the tracker options
+    if (!tracker_type.compare("ChaingraphTracking")) {
+      ret = true;
+      ret = ret and check_option<std::string>("rf_filename");
+      ret = ret and check_option<double>("app");
+      ret = ret and check_option<double>("dis");
+      ret = ret and check_option<double>("det");
+      ret = ret and check_option<double>("mis");
+      ret = ret and check_option<bool>  ("cellness_by_rf");
+      ret = ret and check_option<double>("opp");
+      ret = ret and check_option<double>("forbidden_cost");
+      ret = ret and check_option<bool>  ("with_constraints");
+      ret = ret and check_option<bool>  ("fixed_det");
+      ret = ret and check_option<double>("mean_div_dist");
+      ret = ret and check_option<double>("min_angle");
+      ret = ret and check_option<double>("ep_gap");
+      ret = ret and check_option<int>   ("n_neighbors");
+      ret = ret and check_option<bool>  ("with_div");
+      ret = ret and check_option<double>("cplex_timeout");
+      ret = ret and check_option<bool>  ("alternative_builder");
+    } else if (!tracker_type.compare("ConsTracking")) {
+      ret = true;
+      ret = ret and check_option<double>("lt");
+      ret = ret and check_option<double>("lx");
+      ret = ret and check_option<double>("ly");
+      ret = ret and check_option<double>("lz");
+      ret = ret and check_option<double>("ut");
+      ret = ret and check_option<double>("ux");
+      ret = ret and check_option<double>("uy");
+      ret = ret and check_option<double>("uz");
+      ret = ret and check_option<int>        ("max_number_obj");
+      ret = ret and check_option<double>     ("max_neighbor_dist");
+      ret = ret and check_option<double>     ("div_threshold");
+      ret = ret and check_option<std::string>("rf_filename");
+      ret = ret and check_option<bool>       ("size_dep_det_prob");
+      ret = ret and check_option<double>     ("forbidden_cost");
+      ret = ret and check_option<double>     ("ep_gap");
+      ret = ret and check_option<double>     ("avg_obj_size");
+      ret = ret and check_option<bool>       ("with_tracklets");
+      ret = ret and check_option<double>     ("div_weight");
+      ret = ret and check_option<double>     ("trans_weight");
+      ret = ret and check_option<bool>       ("with_div");
+      ret = ret and check_option<double>     ("dis_cost");
+      ret = ret and check_option<double>     ("app_cost");
+      ret = ret and check_option<bool>       ("with_merger_res");
+      ret = ret and check_option<int>        ("n_dim");
+      ret = ret and check_option<double>     ("trans_param");
+      ret = ret and check_option<double>     ("border_width");
+      ret = ret and check_option<bool>       ("with_constraints");
+      ret = ret and check_option<double>     ("cplex_timeout");
+      ret = ret and check_option<std::string>("ev_dump_file");
+    } else {
+      std::cout << "Unknown tracker \"" << tracker_type << "\"" << std::endl;
+      ret = false;
+    }
+  }
+  return ret;
 }
 
 /** @brief Removes a single trailing character from the string
@@ -55,37 +189,25 @@ std::string zero_padding(int num, int n_zeros) {
   return ss.str();
 }
 
-/** @brief Read a csv table into a vector of string pairs.
+/** @brief Read a csv table into a vector of string double pairs.
  */
-int read_features_from_file(std::string path, std::vector<std::pair<std::string, double> >& features) {
+int read_features_from_file(
+  const std::string path,
+  StringDoublePairVectorType& features)
+{
   std::ifstream f(path.c_str());
   if (!f.is_open()) {
     return 1;
   }
   typedef boost::tokenizer<boost::escaped_list_separator<char> > Tokenizer;
   std::string line;
-  while(getline(f, line)) {
+  while(std::getline(f, line)) {
     Tokenizer tok(line);
-    features.push_back(
-      std::make_pair(*tok.begin(), string_to_double(*(++tok.begin()))));
+    std::string key = *tok.begin();
+    double value = boost::lexical_cast<double>(*(++tok.begin()));
+    features.push_back(std::make_pair(key, value));
   }
   f.close();
-  return 0;
-}
-
-/** @brief Read a csv table into a map from string to double.
- */
-int read_config_from_file(const std::string& path, std::map<std::string, double>& options) {
-  std::ifstream f(path.c_str());
-  if (!f.is_open()) return 1;
-
-  typedef boost::tokenizer<boost::escaped_list_separator<char> > Tokenizer;
-  std::string line;
-  while(getline(f, line)) {
-    Tokenizer tok(line);
-    options[*tok.begin()] = string_to_double(*(++tok.begin()));
-  }
-  f.close();  
   return 0;
 }
 
@@ -101,49 +223,76 @@ bool get_rfs_from_file(std::vector<vigra::RandomForest<unsigned> >& rfs, std::st
   return read_successful;
 }
 
-/** @brief Check if all required options are available.
- * TODO move hard coded parameters to header.
- */
-bool has_required_options(const std::map<std::string, double>& options) {
-  bool ret = true;
-  ret = ret && (options.count("app")         != 0);
-  ret = ret && (options.count("dis")         != 0);
-  ret = ret && (options.count("det")         != 0);
-  ret = ret && (options.count("mis")         != 0);
-  ret = ret && (options.count("opp")         != 0);
-  ret = ret && (options.count("for")         != 0);
-  ret = ret && (options.count("mdd")         != 0);
-  ret = ret && (options.count("min_angle")   != 0);
-  ret = ret && (options.count("ep_gap")      != 0);
-  ret = ret && (options.count("n_neighbors") != 0);
-  return ret;
-}
-
 /** @brief Do the tracking.
  */
-std::vector<std::vector<pgmlink::Event> > track(pgmlink::TraxelStore& ts, std::map<std::string, double> options) {
-  if (!has_required_options(options)) {
-    throw std::runtime_error("Options for chaingraph missing!");
+EventVectorVectorType track(
+  pgmlink::TraxelStore& ts,
+  const TrackingOptions& options)
+{
+  const std::string& tracker_type = options.get_option<std::string>("tracker");
+  // create the ChaingraphTracking or ConsTracking class and call the ()-
+  // operator
+  if (!tracker_type.compare("ChaingraphTracking")) {
+    pgmlink::ChaingraphTracking tracker(
+      options.get_option<std::string>("rf_filename"), // random forest filename
+      options.get_option<double>("app"),              // appearance
+      options.get_option<double>("dis"),              // disappearance
+      options.get_option<double>("det"),              // detection
+      options.get_option<double>("mis"),              // misdetection
+      options.get_option<bool>  ("cellness_by_rf"),   // cellness by rf
+      options.get_option<double>("opp"),              // opportunity cost
+      options.get_option<double>("forbidden_cost"),   // forbidden cost
+      options.get_option<bool>  ("with_constraints"), // with constraints
+      options.get_option<bool>  ("fixed_det"),        // fixed detections
+      options.get_option<double>("mean_div_dist"),    // mean div dist
+      options.get_option<double>("min_angle"),        // min angle
+      options.get_option<double>("ep_gap"),           // ep_gap
+      options.get_option<int>   ("n_neighbors"),      // n neighbors
+      options.get_option<bool>  ("with_div"),         // with divisions
+      options.get_option<double>("cplex_timeout"),    // cplex timeout
+      options.get_option<bool>  ("alternative_builder")); // alternative builder
+    return tracker(ts);
+  } else if (!tracker_type.compare("ConsTracking")) {
+    pgmlink::FieldOfView field_of_view(
+      options.get_option<double>("lt"),
+      options.get_option<double>("lx"),
+      options.get_option<double>("ly"),
+      options.get_option<double>("lz"),
+      options.get_option<double>("ut"),
+      options.get_option<double>("ux"),
+      options.get_option<double>("uy"),
+      options.get_option<double>("uz"));
+    pgmlink::ConsTracking tracker(
+      options.get_option<int>        ("max_number_obj"),
+      options.get_option<double>     ("max_neighbor_dist"),
+      options.get_option<double>     ("div_threshold"),
+      options.get_option<std::string>("rf_filename"),
+      options.get_option<bool>       ("size_dep_det_prob"),
+      options.get_option<double>     ("forbidden_cost"),
+      options.get_option<double>     ("ep_gap"),
+      options.get_option<double>     ("avg_obj_size"),
+      options.get_option<bool>       ("with_tracklets"),
+      options.get_option<double>     ("div_weight"),
+      options.get_option<double>     ("trans_weight"),
+      options.get_option<bool>       ("with_div"),
+      options.get_option<double>     ("dis_cost"),
+      options.get_option<double>     ("app_cost"),
+      options.get_option<bool>       ("with_merger_res"),
+      options.get_option<int>        ("n_dim"),
+      options.get_option<double>     ("trans_param"),
+      options.get_option<double>     ("border_width"),
+      field_of_view,
+      options.get_option<bool>       ("with_constraints"),
+      options.get_option<double>     ("cplex_timeout"),
+      options.get_option<std::string>("ev_dump_file"));
+    return tracker(ts);
+  } else {
+    // throw an error
+    throw std::runtime_error("Unknown tracker \"" + tracker_type + "\"");
+    // return an empty vector to remove compiler warnings
+    EventVectorVectorType ev;
+    return ev;
   }
-  pgmlink::ChaingraphTracking tracker(
-    "none",                 // random forest filename
-    options["app"],         // appearance
-    options["dis"],         // disappearance
-    options["det"],         // detection
-    options["mis"],         // misdetection
-    false,                  // cellness by rf
-    options["opp"],         // opportunity cost
-    options["for"],         // forbidden cost
-    true,                   // with constraints
-    false,                  // fixed detections
-    options["mdd"],         // mean div dist
-    options["min_angle"],   // min angle
-    options["ep_gap"],      // ep_gap
-    options["n_neighbors"], // n neighbors
-    true,                   // with divisions
-    1e+75,                  // cplex timeout
-    false);                 // alternative builder
-  return tracker(ts);
 }
 
 /** @brief Check if a string contains a substring.

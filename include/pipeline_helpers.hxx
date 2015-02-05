@@ -1,3 +1,7 @@
+/* TODO
+ * const correctness for the old functions
+ * limit code width
+ */
 #ifndef PIPELINE_HELPERS_HXX
 #define PIPELINE_HELPERS_HXX
 
@@ -23,11 +27,23 @@ namespace isbi_pipeline {
 typedef float FeatureType;
 typedef std::vector<pgmlink::Event> EventVectorType;
 typedef std::vector<EventVectorType> EventVectorVectorType;
+typedef std::vector<std::pair<std::string, double> > StringDoublePairVectorType;
 
 // ArgumentError class
 class ArgumentError : public std::exception {
 public:
   virtual const char* what() const throw();
+};
+
+class TrackingOptions {
+ public:
+  TrackingOptions(const std::string path);
+  bool is_legal() const;
+  template<typename T> bool has_option(const std::string key) const;
+  template<typename T> bool check_option(const std::string key) const;
+  template<typename T> T get_option(const std::string key) const;
+ private:
+  std::map<std::string, std::string> options_map_;
 };
 
 
@@ -41,7 +57,9 @@ std::string zero_padding(int num, int n_zeros);
 
 
 // read features from csv_style file
-int read_features_from_file(std::string path, std::vector<std::pair<std::string, double> >& features);
+int read_features_from_file(
+  const std::string path,
+  StringDoublePairVectorType& features);
 
 
 // get random_forests from file
@@ -52,12 +70,8 @@ bool get_rfs_from_file(std::vector<vigra::RandomForest<unsigned> >& rfs,
                        int n_leading_zeros = 4);
 
 
-// read config from file (such as renormalization parameters,...)
-int read_config_from_file(const std::string& path, std::map<std::string, double>& options);
-
-
 // do the tracking
-EventVectorVectorType track(pgmlink::TraxelStore& ts, std::map<std::string, double> options);
+EventVectorVectorType track(pgmlink::TraxelStore& ts, const TrackingOptions& options);
 
 
 // helper function to iterate over tif only
