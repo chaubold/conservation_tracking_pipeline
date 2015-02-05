@@ -1,0 +1,14 @@
+How To Run Structured Learning on the CTC datasets:
+===================================================
+
+After having created a tracking project, one has to EXPORT the OBJECTS layer in ilastik, into the folder of the raw data, called "Objects.h5".
+
+# go into tracking result of training data
+cd <dataset>/<sequence>_GT/TRA
+
+# create a "new" style groundtruth.h5 with move events etc
+python /Users/chaubold/hci/code/embryonic/toolbox/ctc_gt_to_hdf5.py --input-tif man_track000.tif --input-track man_track.txt --output-file groundtruth.h5
+
+# transform to "old" style groundtruth per frame, introducing appearances and disappearances into the events
+mkdir groundtruth-frame
+python /Users/chaubold/hci/code/embryonic/toolbox/h5_to_gt.py --input-file groundtruth.h5 --output-dir groundtruth-frames/ --label-image <dataset>/<sequence>/Objects.h5 --input_format {0:04d}
