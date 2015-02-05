@@ -192,38 +192,49 @@ int FeatureCalculator<2>::calculate(
 {
   // initialize offset and size of the current features along the
   // feature vectors
+  std::vector<size_t> offsets;
   size_t offset = 0;
   size_t size = 0;
   features.reshape(
     vigra::Shape3(image.shape(0), image.shape(1), get_feature_size()));
+  
+  // store all offsets
   for (
     StringDoublePairVectorType::const_iterator it = feature_scales_.begin();
     it != feature_scales_.end();
     it++
-  ) {
+  ) 
+  {
+    offsets.push_back(offset);
+    offset += get_feature_size(it->first);
+  }
+
+  // compute features in parallel
+  #pragma omp parallel for
+  for(size_t fs = 0; fs < feature_scales_.size(); fs++)
+  {
     // get the size of the current feature and create a view of all
     // feature vectors
-    size = get_feature_size(it->first);
+    size = get_feature_size(feature_scales_[fs].first);
     vigra::MultiArrayView<3, DataType> features_v;
     features_v = features.subarray(
-      vigra::Shape3(0, 0, offset),
-      vigra::Shape3(image.shape(0), image.shape(1), offset + size));
-    if (!it->first.compare("GaussianSmoothing")) {
-      calculate_gaussian_smoothing(image, features_v, it->second);
-    } else if (!it->first.compare("LaplacianOfGaussians")) {
-      calculate_laplacian_of_gaussians(image, features_v, it->second);
-    } else if (!it->first.compare("GaussianGradientMagnitude")) {
-      calculate_gaussian_gradient_magnitude(image, features_v, it->second);
-    } else if (!it->first.compare("DifferenceOfGaussians")) {
-      calculate_difference_of_gaussians(image, features_v, it->second);
-    } else if (!it->first.compare("StructureTensorEigenvalues")) {
-      calculate_structure_tensor_eigenvalues(image, features_v, it->second);
-    } else if (!it->first.compare("HessianOfGaussianEigenvalues")) {
-      calculate_hessian_of_gaussian_eigenvalues(image, features_v, it->second);
+      vigra::Shape3(0, 0, offsets[fs]),
+      vigra::Shape3(image.shape(0), image.shape(1), offsets[fs] + size));
+    if (!feature_scales_[fs].first.compare("GaussianSmoothing")) {
+      calculate_gaussian_smoothing(image, features_v, feature_scales_[fs].second);
+    } else if (!feature_scales_[fs].first.compare("LaplacianOfGaussians")) {
+      calculate_laplacian_of_gaussians(image, features_v, feature_scales_[fs].second);
+    } else if (!feature_scales_[fs].first.compare("GaussianGradientMagnitude")) {
+      calculate_gaussian_gradient_magnitude(image, features_v, feature_scales_[fs].second);
+    } else if (!feature_scales_[fs].first.compare("DifferenceOfGaussians")) {
+      calculate_difference_of_gaussians(image, features_v, feature_scales_[fs].second);
+    } else if (!feature_scales_[fs].first.compare("StructureTensorEigenvalues")) {
+      calculate_structure_tensor_eigenvalues(image, features_v, feature_scales_[fs].second);
+    } else if (!feature_scales_[fs].first.compare("HessianOfGaussianEigenvalues")) {
+      calculate_hessian_of_gaussian_eigenvalues(image, features_v, feature_scales_[fs].second);
     } else {
-      return 1;
+      throw std::runtime_error("Invalid feature name used");
     }
-    offset += size;
   }
   LOG("Feature calculation done");
   return 0;
@@ -376,19 +387,28 @@ int SegmentationCalculator<N>::calculate(
   vigra::MultiArrayView<2, DataType> prediction_map_view(
     vigra::Shape2(pixel_count, 2),
     segmentation.prediction_map_.data());
-  vigra::MultiArray<2, DataType> prediction_temp(pixel_count, 2);
   // loop over all random forests for prediction probabilities
   LOG("Evaluate random forests");
-  for (
-    std::vector<RandomForestType>::const_iterator it = random_forests_.begin();
-    it != random_forests_.end();
-    it++
-  ) {
-    it->predictProbabilities(
+
+  #pragma omp parallel for
+  // for(
+  //   std::vector<RandomForestType>::const_iterator it = random_forests_.begin();
+  //   it != random_forests_.end();
+  //   it++
+  // ) {
+  for(size_t rf = 0; rf < random_forests_.size(); rf++)
+  {
+    vigra::MultiArray<2, DataType> prediction_temp(pixel_count, 2);
+    random_forests_[rf].predictProbabilities(
       feature_view,
       prediction_temp);
-    prediction_map_view += prediction_temp;
+
+    #pragma omp critical
+    {
+      prediction_map_view += prediction_temp;
+    }
   }
+
   LOG("Assign the segmentation labels");
   // assign the labels
   typename vigra::MultiArrayView<N, unsigned>::iterator seg_it;
