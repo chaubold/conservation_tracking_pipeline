@@ -305,54 +305,29 @@ int Segmentation<N>::export_hdf5(const std::string filename) {
 }
 
 template<int N>
-int Segmentation<N>::read_hdf5(const std::string filename) {
-  // get all import infos
-  vigra::HDF5ImportInfo segmentation_info(
-    filename.c_str(),
-    "/segmentation/segmentation");
-  vigra::HDF5ImportInfo labels_info(
-    filename.c_str(),
-    "/segmentation/labels");
-  vigra::HDF5ImportInfo features_info(
-    filename.c_str(),
-    "/segmentation/features");
-  vigra::HDF5ImportInfo prediction_map_info(
-    filename.c_str(),
-    "/segmentation/prediction_map");
-  // assert sizes
-  if (segmentation_info.numDimensions() != N) {
-    throw std::runtime_error("Segmentation image has wrong dimension");
-  }
-  if (labels_info.numDimensions() != N) {
-    throw std::runtime_error("Label image has wrong dimension");
-  }
-  if (features_info.numDimensions() != N+1) {
-    throw std::runtime_error("Feature image has wrong dimension");
-  }
-  if (prediction_map_info.numDimensions() != N+1) {
-    throw std::runtime_error("Prediction map has wrong dimension");
-  }
-  // reshape multi arrays
-  typedef typename vigra::MultiArrayShape<N>::type NShapeType;
-  typedef typename vigra::MultiArrayShape<N+1>::type N1ShapeType;
-  NShapeType seg_shape(segmentation_info.shape().begin());
-  segmentation_image_.reshape(seg_shape);
-  NShapeType labels_shape(labels_info.shape().begin());
-  label_image_.reshape(labels_shape);
-  N1ShapeType features_shape(features_info.shape().begin());
-  feature_image_.reshape(features_shape);
-  N1ShapeType prediction_map_shape(prediction_map_info.shape().begin());
-  prediction_map_.reshape(prediction_map_shape);
-  // Debug
-  LOG("Shape of segmentation image: " << seg_shape);
-  LOG("Shape of label image: " << labels_shape);
-  LOG("Shape of feature image: " << features_shape);
-  LOG("Shape of prediction map: " << prediction_map_shape);
+int Segmentation<N>::read_hdf5(
+  const std::string filename,
+  const bool segmentation_only)
+{
   // load data
-  vigra::readHDF5(segmentation_info, segmentation_image_);
-  vigra::readHDF5(labels_info, label_image_);
-  vigra::readHDF5(features_info, feature_image_);
-  vigra::readHDF5(prediction_map_info, prediction_map_);
+  read_hdf5_array<N, unsigned>(
+    filename,
+    "/segmentation/segmentation",
+    segmentation_image_);
+  read_hdf5_array<N, unsigned>(
+    filename,
+    "/segmentation/labels",
+    label_image_);
+  if (!segmentation_only) {
+    read_hdf5_array<N+1, DataType>(
+      filename,
+      "/segmentation/features",
+      feature_image_);
+    read_hdf5_array<N+1, DataType>(
+      filename,
+      "/segmentation/prediction_map",
+      prediction_map_);
+  }
   // read label count
   unsigned int min, max;
   label_image_.minmax(&min, &max);

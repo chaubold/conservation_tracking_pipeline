@@ -22,6 +22,12 @@ typedef float DataType;
 typedef std::vector<std::pair<std::string, double> > StringDoublePairVectorType;
 typedef vigra::RandomForest<unsigned> RandomForestType;
 
+template<int N, typename T>
+int read_hdf5_array(
+  const std::string filename,
+  const std::string path_in_file,
+  vigra::MultiArray<N, T>& multi_array);
+
 template<int N>
 class FeatureCalculator {
  public:
@@ -75,7 +81,9 @@ struct Segmentation {
   
   void initialize(const vigra::MultiArray<N, DataType>& image);
   int export_hdf5(const std::string filename);
-  int read_hdf5(const std::string filename);
+  int read_hdf5(
+    const std::string filename,
+    const bool segmentation_only = false);
 };
 
 template<int N>
@@ -123,6 +131,30 @@ class TraxelExtractor {
   unsigned int lower_size_lim_;
   unsigned int upper_size_lim_;
 };
+
+/*=============================================================================
+  Implementation
+=============================================================================*/
+
+// TODO check if file and dataset exist
+template<int N, typename T>
+int read_hdf5_array(
+  const std::string filename,
+  const std::string path_in_file,
+  vigra::MultiArray<N, T>& multi_array)
+{
+  vigra::HDF5ImportInfo import_info(
+    filename.c_str(),
+    path_in_file.c_str());
+  if(import_info.numDimensions() != N) {
+    throw std::runtime_error("Dataset has wrong dimension");
+  }
+  typedef typename vigra::MultiArrayShape<N>::type NShapeType;
+  NShapeType shape(import_info.shape().begin());
+  multi_array.reshape(shape);
+  vigra::readHDF5(import_info, multi_array);
+  return 0;
+}
 
 } // end of namespace segmentation
 

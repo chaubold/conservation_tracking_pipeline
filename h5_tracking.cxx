@@ -111,9 +111,9 @@ int main(int argc, char** argv) {
     {
       std::string filename(dir_itr->string());
       std::cout << "processing " + filename + " ...\n";
-      // load the segmentation
+      // load the labelimage
       isbi::Segmentation<2> segmentation;
-      segmentation.read_hdf5(filename);
+      segmentation.read_hdf5(filename, true);
       // create traxels and add them to the traxelstore
       traxel_extractor.extract(segmentation, timestep, ts);
     }
