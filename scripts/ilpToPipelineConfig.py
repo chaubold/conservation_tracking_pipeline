@@ -27,12 +27,23 @@ if __name__ == "__main__":
 					if selectionMatrix[f][s] == True:
 						out_f.write('{},{}\n'.format(featureNames[f], scales[s]))
 
-		# ------------------------------------------------------
-		# copy pixel classification random forest
 		with h5py.File(args.out_path + '/classifier.h5', 'w') as out_f:
+			# ------------------------------------------------------
+			# copy pixel classification random forest
 			out_rf = out_f.create_group('PixelClassification')
 			in_f.copy('PixelClassification/ClassifierForests', out_rf)
 
-		# ------------------------------------------------------
-		# copy tracking configuration
-		# TODO...
+	with h5py.File(args.tracking_project, 'r+') as in_f:	
+		with h5py.File(args.out_path + '/classifier.h5', 'r+') as out_f:
+			# ------------------------------------------------------
+			# copy tracking random forests
+			out_rf = out_f.create_group('CountClassification')
+			in_f.copy('CountClassification/ClassifierForests', out_rf)
+
+			out_rf = out_f.create_group('DivisionDetection')
+			in_f.copy('DivisionDetection/ClassifierForests', out_rf)
+
+			# ------------------------------------------------------
+			# copy tracking configuration
+			#out_tracking = out_f.create_group('ConservationTracking')
+			in_f.copy('ConservationTracking', out_f)
