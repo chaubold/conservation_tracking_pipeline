@@ -115,54 +115,47 @@ bool TrackingOptions::is_legal() const {
     // check the tracker options
     if (!tracker_type.compare("ChaingraphTracking")) {
       ret = true;
-      ret = ret and check_option<std::string>("rf_filename");
-      ret = ret and check_option<double>("app");
-      ret = ret and check_option<double>("dis");
-      ret = ret and check_option<double>("det");
-      ret = ret and check_option<double>("mis");
-      ret = ret and check_option<bool>  ("cellness_by_rf");
-      ret = ret and check_option<double>("opp");
-      ret = ret and check_option<double>("forbidden_cost");
-      ret = ret and check_option<bool>  ("with_constraints");
-      ret = ret and check_option<bool>  ("fixed_det");
-      ret = ret and check_option<double>("mean_div_dist");
-      ret = ret and check_option<double>("min_angle");
-      ret = ret and check_option<double>("ep_gap");
-      ret = ret and check_option<int>   ("n_neighbors");
-      ret = ret and check_option<bool>  ("with_div");
+      ret = ret and check_option<double>("appearanceCost");
+      ret = ret and check_option<double>("disappearanceCost");
+      ret = ret and check_option<double>("detection");
+      ret = ret and check_option<double>("misdetection");
+      ret = ret and check_option<double>("opportunityCost");
+      ret = ret and check_option<double>("forbiddenCost");
+      ret = ret and check_option<bool>  ("fixedDetections");
+      ret = ret and check_option<double>("meanDivisionDist");
+      ret = ret and check_option<double>("minAngle");
+      ret = ret and check_option<double>("epGap");
+      ret = ret and check_option<int>   ("nNeighbors");
+      ret = ret and check_option<bool>  ("withDivisions");
       ret = ret and check_option<double>("cplex_timeout");
-      ret = ret and check_option<bool>  ("alternative_builder");
     } else if (!tracker_type.compare("ConsTracking")) {
       ret = true;
-      ret = ret and check_option<double>("lt");
-      ret = ret and check_option<double>("lx");
-      ret = ret and check_option<double>("ly");
-      ret = ret and check_option<double>("lz");
-      ret = ret and check_option<double>("ut");
-      ret = ret and check_option<double>("ux");
-      ret = ret and check_option<double>("uy");
-      ret = ret and check_option<double>("uz");
-      ret = ret and check_option<int>        ("max_number_obj");
-      ret = ret and check_option<double>     ("max_neighbor_dist");
-      ret = ret and check_option<double>     ("div_threshold");
-      ret = ret and check_option<std::string>("rf_filename");
-      ret = ret and check_option<bool>       ("size_dep_det_prob");
-      ret = ret and check_option<double>     ("forbidden_cost");
-      ret = ret and check_option<double>     ("ep_gap");
-      ret = ret and check_option<double>     ("avg_obj_size");
-      ret = ret and check_option<bool>       ("with_tracklets");
-      ret = ret and check_option<double>     ("div_weight");
-      ret = ret and check_option<double>     ("trans_weight");
-      ret = ret and check_option<bool>       ("with_div");
-      ret = ret and check_option<double>     ("dis_cost");
-      ret = ret and check_option<double>     ("app_cost");
-      ret = ret and check_option<bool>       ("with_merger_res");
-      ret = ret and check_option<int>        ("n_dim");
-      ret = ret and check_option<double>     ("trans_param");
-      ret = ret and check_option<double>     ("border_width");
-      ret = ret and check_option<bool>       ("with_constraints");
-      ret = ret and check_option<double>     ("cplex_timeout");
-      ret = ret and check_option<std::string>("ev_dump_file");
+      ret = ret and check_option<double>("time_range_0");
+      ret = ret and check_option<double>("x_range_0");
+      ret = ret and check_option<double>("y_range_0");
+      ret = ret and check_option<double>("z_range_0");
+      ret = ret and check_option<double>("time_range_1");
+      ret = ret and check_option<double>("x_range_1");
+      ret = ret and check_option<double>("y_range_1");
+      ret = ret and check_option<double>("z_range_1");
+      ret = ret and check_option<int   >("maxObj");
+      ret = ret and check_option<bool  >("sizeDependent");
+      ret = ret and check_option<double>("avgSize");
+      ret = ret and check_option<double>("maxDist");
+      ret = ret and check_option<bool  >("withDivisions");
+      ret = ret and check_option<double>("divThreshold");
+      ret = ret and check_option<double>("forbiddenCost");
+      ret = ret and check_option<double>("epGap");
+      ret = ret and check_option<bool  >("withTracklets");
+      ret = ret and check_option<double>("divWeight");
+      ret = ret and check_option<double>("transWeight");
+      ret = ret and check_option<double>("disappearanceCost");
+      ret = ret and check_option<double>("appearanceCost");
+      ret = ret and check_option<int   >("nDim");
+      ret = ret and check_option<double>("transParameter");
+      ret = ret and check_option<double>("borderAwareWidth");
+      ret = ret and check_option<bool  >("withConstraints");
+      ret = ret and check_option<double>("cplexTimeout");
     } else {
       std::cout << "Unknown tracker \"" << tracker_type << "\"" << std::endl;
       ret = false;
@@ -225,6 +218,8 @@ bool get_rfs_from_file(std::vector<vigra::RandomForest<unsigned> >& rfs, std::st
 
 /** @brief Do the tracking.
  */
+// TODO the whole following code is ugly -> will someone please come
+// up with a cool idea?
 EventVectorVectorType track(
   pgmlink::TraxelStore& ts,
   const TrackingOptions& options)
@@ -234,58 +229,64 @@ EventVectorVectorType track(
   // operator
   if (!tracker_type.compare("ChaingraphTracking")) {
     pgmlink::ChaingraphTracking tracker(
-      options.get_option<std::string>("rf_filename"), // random forest filename
-      options.get_option<double>("app"),              // appearance
-      options.get_option<double>("dis"),              // disappearance
-      options.get_option<double>("det"),              // detection
-      options.get_option<double>("mis"),              // misdetection
-      options.get_option<bool>  ("cellness_by_rf"),   // cellness by rf
-      options.get_option<double>("opp"),              // opportunity cost
-      options.get_option<double>("forbidden_cost"),   // forbidden cost
-      options.get_option<bool>  ("with_constraints"), // with constraints
-      options.get_option<bool>  ("fixed_det"),        // fixed detections
-      options.get_option<double>("mean_div_dist"),    // mean div dist
-      options.get_option<double>("min_angle"),        // min angle
-      options.get_option<double>("ep_gap"),           // ep_gap
-      options.get_option<int>   ("n_neighbors"),      // n neighbors
-      options.get_option<bool>  ("with_div"),         // with divisions
-      options.get_option<double>("cplex_timeout"),    // cplex timeout
-      options.get_option<bool>  ("alternative_builder")); // alternative builder
+      "none", // random forest filename
+      options.get_option<double>("appearanceCost"),
+      options.get_option<double>("disappearanceCost"),
+      options.get_option<double>("detection"),
+      options.get_option<double>("misdetection"),
+      false, // cellness by rf
+      options.get_option<double>("opportunityCost"),
+      options.get_option<double>("forbiddenCost"),
+      true, // with constraints
+      options.get_option<bool>  ("fixedDetections"),
+      options.get_option<double>("meanDivisionDist"),
+      options.get_option<double>("minAngle"),
+      options.get_option<double>("epGap"),
+      options.get_option<int>   ("nNeighbors"),
+      options.get_option<bool>  ("withDivisions"),
+      options.get_option<double>("cplex_timeout"),
+      false); // alternative builder
     return tracker(ts);
   } else if (!tracker_type.compare("ConsTracking")) {
+    // create the field of view
     pgmlink::FieldOfView field_of_view(
-      options.get_option<double>("lt"),
-      options.get_option<double>("lx"),
-      options.get_option<double>("ly"),
-      options.get_option<double>("lz"),
-      options.get_option<double>("ut"),
-      options.get_option<double>("ux"),
-      options.get_option<double>("uy"),
-      options.get_option<double>("uz"));
+      options.get_option<double>("time_range_0"),
+      options.get_option<double>("x_range_0"),
+      options.get_option<double>("y_range_0"),
+      options.get_option<double>("z_range_0"),
+      options.get_option<double>("time_range_1"),
+      options.get_option<double>("t_range_1"),
+      options.get_option<double>("t_range_1"),
+      options.get_option<double>("t_range_1"));
+    // build the tracker
     pgmlink::ConsTracking tracker(
-      options.get_option<int>        ("max_number_obj"),
-      options.get_option<double>     ("max_neighbor_dist"),
-      options.get_option<double>     ("div_threshold"),
-      options.get_option<std::string>("rf_filename"),
-      options.get_option<bool>       ("size_dep_det_prob"),
-      options.get_option<double>     ("forbidden_cost"),
-      options.get_option<double>     ("ep_gap"),
-      options.get_option<double>     ("avg_obj_size"),
-      options.get_option<bool>       ("with_tracklets"),
-      options.get_option<double>     ("div_weight"),
-      options.get_option<double>     ("trans_weight"),
-      options.get_option<bool>       ("with_div"),
-      options.get_option<double>     ("dis_cost"),
-      options.get_option<double>     ("app_cost"),
-      options.get_option<bool>       ("with_merger_res"),
-      options.get_option<int>        ("n_dim"),
-      options.get_option<double>     ("trans_param"),
-      options.get_option<double>     ("border_width"),
+      options.get_option<int   >("maxObj"),
+      options.get_option<bool  >("sizeDependent"),
+      options.get_option<double>("avgSize"),
+      options.get_option<double>("maxDist"),
+      options.get_option<bool  >("withDivisions"),
+      options.get_option<double>("divThreshold"),
+      "none", // random forest filename
       field_of_view,
-      options.get_option<bool>       ("with_constraints"),
-      options.get_option<double>     ("cplex_timeout"),
-      options.get_option<std::string>("ev_dump_file"));
-    return tracker(ts);
+      "none"); // event_vector_dump_filename
+    // build the hypotheses graph
+    tracker.build_hypo_graph(ts);
+    // track
+    EventVectorVectorType ret = tracker.track(
+      options.get_option<double>("forbiddenCost"),
+      options.get_option<double>("epGap"),
+      options.get_option<bool  >("withTracklets"),
+      options.get_option<double>("divWeight"),
+      options.get_option<double>("transWeight"),
+      options.get_option<double>("disappearanceCost"),
+      options.get_option<double>("appearanceCost"),
+      options.get_option<int   >("nDim"),
+      options.get_option<double>("transParameter"),
+      options.get_option<double>("borderAwareWidth"),
+      options.get_option<bool  >("withConstraints"),
+      options.get_option<double>("cplexTimeout"));
+    // TODO handle merger resolving
+    return ret;
   } else {
     // throw an error
     throw std::runtime_error("Unknown tracker \"" + tracker_type + "\"");
