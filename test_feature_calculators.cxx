@@ -201,12 +201,29 @@ std::set<DataType> find_unique_labels_in_roi(vigra::MultiArrayView<N, DataType> 
 	return std::move(labels);
 }
 
+std::ostream& operator<<(std::ostream& lhs, const pgmlink::feature_array& rhs)
+{
+	if(rhs.size() == 0)
+		return lhs;
+
+	lhs << "(";
+	for(float f : rhs)
+	{
+		lhs << f << ", ";
+	}
+	lhs << ")";
+	return lhs;
+}
+
 int main(int argc, char** argv) {
 	if(argc != 3)
 	{
 		std::cout << "Wrong number of arguments, 3 expected" << std::endl;
 		return -1;
 	}
+
+	// mimics the division feature computation in ilastik/ilastik/applets/trackingFeatureExtraction/trackingFeatures.py
+	// TODO: incorporate scale factor for anisotropic data
 
 	// load raw image
 	std::string image_filename(argv[1]);
@@ -234,6 +251,48 @@ int main(int argc, char** argv) {
 	std::shared_ptr<fe::FeatureCalculator> squared_distance_calculator(new fe::SquareRootSquaredDifferenceCalculator());
 	// std::shared_ptr<fe::FeatureCalculator> squared_distance_calculator(new fe::SquaredDifferenceCalculator());
 	std::shared_ptr<fe::FeatureCalculator> children_ratio_calculator(new fe::RatioCalculator());
+	std::shared_ptr<fe::FeatureCalculator> parent_children_ratio_calculator(new fe::TripletOperationCalculator(
+		[](const pgmlink::feature_array& a, const pgmlink::feature_array& b, const pgmlink::feature_array& c)
+		{
+			assert(a.size() == b.size() && a.size() == c.size());
+			pgmlink::feature_array ret(a.size(), 0.);
+			for(size_t i = 0; i < a.size(); i++)
+			{
+				ret[i] = b[i] + c[i];
+				if(ret[i] < 0.000001)
+					ret[i] = 9999.0;
+				else
+					ret[i] = a[i] / ret[i];
+			}
+			return std::move(ret);
+		},
+		"ParentChildrenRatio"));
+	std::shared_ptr<fe::FeatureCalculator> parent_children_angle_calculator(new fe::TripletOperationCalculator(
+		[](const pgmlink::feature_array& a, const pgmlink::feature_array& b, const pgmlink::feature_array& c)
+		{
+			assert(a.size() == b.size() && a.size() == c.size());
+			pgmlink::feature_array ret(1, 0.);
+
+			vigra::TinyVector<float, 2> v1, v2;
+			for(size_t i = 0; i < a.size(); i++)
+			{
+				v1[i] = b[i] - a[i];
+				v2[i] = c[i] - a[i];
+			}
+
+			float length_product = vigra::squaredNorm(v1) * vigra::squaredNorm(v2);
+			if(length_product == 0)
+			{
+				ret[0] = 0;
+			}
+			else
+			{
+				ret[0] = acos(vigra::dot(v1, v2) / length_product) * 180.0 / M_PI;
+			}
+
+			return std::move(ret);
+		},
+		"ParentChildrenAngle"));
 
 	for(pgmlink::Traxel& t : traxels_f0)
 	{
@@ -290,10 +349,41 @@ int main(int argc, char** argv) {
 			t.features[feat_name.str()] = { nearest_neighbors[i].second };
 		}
 
-		// compute remaining features:
-		t.features["ChildrenRatio_Count"] = children_ratio_calculator->calculate(traxels_f1[nearest_neighbors[0].first].features["Count"], 
-																				 traxels_f1[nearest_neighbors[1].first].features["Count"]);
-		t.features["ChildrenRatio_Mean"] = children_ratio_calculator->calculate(traxels_f1[nearest_neighbors[0].first].features["Mean"], 
-																				traxels_f1[nearest_neighbors[1].first].features["Mean"]);
+		if(nearest_neighbors.size() > 1)
+		{
+			// compute remaining features:
+			t.features["ChildrenRatio_Count"] = children_ratio_calculator->calculate(
+															traxels_f1[nearest_neighbors[0].first].features["Count"], 
+															traxels_f1[nearest_neighbors[1].first].features["Count"]);
+			t.features["ChildrenRatio_Mean"] = children_ratio_calculator->calculate(
+															traxels_f1[nearest_neighbors[0].first].features["Mean"], 
+															traxels_f1[nearest_neighbors[1].first].features["Mean"]);
+			t.features["ParentChildrenRatio_Mean"] = parent_children_ratio_calculator->calculate(
+															t.features["Mean"],
+															traxels_f1[nearest_neighbors[0].first].features["Mean"], 
+															traxels_f1[nearest_neighbors[1].first].features["Mean"]);
+			t.features["ParentChildrenRatio_Count"] = parent_children_ratio_calculator->calculate(
+															t.features["Count"],
+															traxels_f1[nearest_neighbors[0].first].features["Count"], 
+															traxels_f1[nearest_neighbors[1].first].features["Count"]);
+			t.features["ParentChildrenAngle_RegionCenter"] = parent_children_angle_calculator->calculate(
+															t.features["RegionCenter"],
+															traxels_f1[nearest_neighbors[0].first].features["RegionCenter"], 
+															traxels_f1[nearest_neighbors[1].first].features["RegionCenter"]);
+		}
+		else
+		{
+			t.features["ChildrenRatio_Count"] = {0.0f};
+			t.features["ChildrenRatio_Mean"] = {0.0f};
+			t.features["ParentChildrenRatio_Mean"] = {0.0f};
+			t.features["ParentChildrenRatio_Count"] = {0.0f};
+			t.features["ParentChildrenAngle_RegionCenter"] = {0.0f};
+		}
+		std::cout << "\tChildrenRatio_Count" << t.features["ChildrenRatio_Count"] << std::endl;
+		std::cout << "\tChildrenRatio_Mean" << t.features["ChildrenRatio_Mean"] << std::endl;
+		std::cout << "\tParentChildrenRatio_Mean" << t.features["ParentChildrenRatio_Mean"] << std::endl;
+		std::cout << "\tParentChildrenRatio_Count" << t.features["ParentChildrenRatio_Count"] << std::endl;
+		std::cout << "\tParentChildrenAngle_RegionCenter" << t.features["ParentChildrenAngle_RegionCenter"] << std::endl;
+
 	}
 }
