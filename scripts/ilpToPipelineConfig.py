@@ -3,6 +3,16 @@ import numpy as np
 import h5py
 import argparse
 
+def writeSelectedRegionFeatures(out_f, h5_group):
+	for feature_group_name in h5_group.keys():
+		feature_group = h5_group[feature_group_name]
+		for feature in feature_group.keys():
+			if feature == 'Coord<Principal<Kurtosis>>':
+				feature = 'Coord<Principal<Kurtosis> >'
+			elif feature == 'Coord<Principal<Skewness>>':
+				feature = 'Coord<Principal<Skewness> >'
+			out_f.write('{}\n'.format(feature))
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Create a config.txt, classifier.h5 and features.txt from a given pixel classification and tracking ilastik project")
 	#parser.add_argument('--shape', metavar='shape', required=True, type=int, nargs='+', help='Shape of each image given as 2 or 3 ints (time axes is handled internally)')
@@ -47,3 +57,9 @@ if __name__ == "__main__":
 			# copy tracking configuration
 			#out_tracking = out_f.create_group('ConservationTracking')
 			in_f.copy('ConservationTracking', out_f)
+
+		with open(args.out_path + '/object_count_features.txt', 'w') as out_f:
+			writeSelectedRegionFeatures(out_f, in_f['CountClassification/SelectedFeatures'])
+
+		with open(args.out_path + '/division_features.txt', 'w') as out_f:
+			writeSelectedRegionFeatures(out_f, in_f['DivisionDetection/SelectedFeatures'])
