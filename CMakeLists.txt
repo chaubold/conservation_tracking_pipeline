@@ -52,14 +52,12 @@ INCLUDE_DIRECTORIES(
   "${PROJECT_SOURCE_DIR}/include/"
 )
 
-FILE(GLOB LIB_SOURCES src/*.cpp)
-
 INCLUDE_DIRECTORIES(include ${CPLEX_INCLUDE_DIRS})
 
 #CPLEX switch to be compatible with STL
 ADD_DEFINITIONS(-DIL_STD)
 
-ADD_LIBRARY(pipeline_helpers STATIC src/pipeline_helpers.cxx src/segmentation.cxx src/lineage.cxx)
+ADD_LIBRARY(pipeline_helpers STATIC src/pipeline_helpers.cxx src/segmentation.cxx src/lineage.cxx src/division_feature_extractor.cxx)
 
 ADD_EXECUTABLE(isbi_pipeline main.cxx)
 TARGET_LINK_LIBRARIES(isbi_pipeline pipeline_helpers gomp ${PGMLINK_LIBRARIES} ${VIGRA_IMPEX_LIBRARY} ${Boost_LIBRARIES} ${HDF5_LIBRARIES} ${CPLEX_LIBRARIES})
@@ -71,4 +69,4 @@ TARGET_LINK_LIBRARIES(h5_tracking pipeline_helpers gomp ${PGMLINK_LIBRARIES} ${V
 # TARGET_LINK_LIBRARIES(isbi_pipeline3d pipeline_helpers ${PGMLINK_LIBRARIES} ${VIGRA_IMPEX_LIBRARY} ${Boost_LIBRARIES})
 
 ADD_EXECUTABLE(test_feature_calculators test_feature_calculators.cxx)
-TARGET_LINK_LIBRARIES(test_feature_calculators ${PGMLINK_LIBRARIES} ${VIGRA_IMPEX_LIBRARY} ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(test_feature_calculators pipeline_helpers ${PGMLINK_LIBRARIES} ${VIGRA_IMPEX_LIBRARY} ${Boost_LIBRARIES})
