@@ -238,6 +238,7 @@ int main(int argc, char** argv) {
     vigra::Shape2 label_shape(label_info.width(), label_info.height());
 	vigra::MultiArray<2, vigra::UInt8> label_image(label_shape);
 	vigra::importImage(label_info, label_image);
+	std::cout << "Image has shape: " << shape << std::endl;
 
 	// compute region features
 	std::vector<pgmlink::Traxel> traxels_f0;
@@ -247,7 +248,7 @@ int main(int argc, char** argv) {
 	pgmlink::features::extract_region_features<2, vigra::UInt8, vigra::UInt8>(traxels_f1, image, label_image, 1);
 
 	// for each traxel, find candidates in next frame
-	size_t template_size = 50;
+	size_t template_size = 100;
 	std::shared_ptr<fe::FeatureCalculator> squared_distance_calculator(new fe::SquareRootSquaredDifferenceCalculator());
 	// std::shared_ptr<fe::FeatureCalculator> squared_distance_calculator(new fe::SquaredDifferenceCalculator());
 	std::shared_ptr<fe::FeatureCalculator> children_ratio_calculator(new fe::RatioCalculator());
@@ -280,7 +281,7 @@ int main(int argc, char** argv) {
 				v2[i] = c[i] - a[i];
 			}
 
-			float length_product = vigra::squaredNorm(v1) * vigra::squaredNorm(v2);
+			float length_product = sqrt(vigra::squaredNorm(v1) * vigra::squaredNorm(v2));
 			if(length_product == 0)
 			{
 				ret[0] = 0;
@@ -296,15 +297,21 @@ int main(int argc, char** argv) {
 
 	for(pgmlink::Traxel& t : traxels_f0)
 	{
-		std::cout << "Investigating " << t << std::endl;
+		std::cout << "Investigating " << t << " at com " << t.features["RegionCenter"] << std::endl;
 		// get ROI from next frame
 		vigra::TinyVector<size_t, 2> start;
-		start[0] = std::max(0, int(t.features["Coord< Minimum >"][0] - template_size / 2));
-		start[1] = std::max(0, int(t.features["Coord< Minimum >"][1] - template_size / 2));
+		// start[0] = std::max(0, int(t.features["Coord< Minimum >"][0] - template_size / 2));
+		// start[1] = std::max(0, int(t.features["Coord< Minimum >"][1] - template_size / 2));
+		start[0] = std::max(0, int(t.features["RegionCenter"][0] - template_size / 2));
+		start[1] = std::max(0, int(t.features["RegionCenter"][1] - template_size / 2));
 
 		vigra::TinyVector<size_t, 2> stop;
-		stop[0] = std::min(int(shape[0]), int(t.features["Coord< Maximum >"][0] + template_size / 2));
-		stop[1] = std::min(int(shape[1]), int(t.features["Coord< Maximum >"][1] + template_size / 2));
+		// stop[0] = std::min(int(shape[0]), int(t.features["Coord< Maximum >"][0] + template_size / 2));
+		// stop[1] = std::min(int(shape[1]), int(t.features["Coord< Maximum >"][1] + template_size / 2));
+		stop[0] = std::min(int(shape[0]), int(t.features["RegionCenter"][0] + template_size / 2));
+		stop[1] = std::min(int(shape[1]), int(t.features["RegionCenter"][1] + template_size / 2));
+
+		std::cout << "Checking ROI " << start << " to " << stop << std::endl;
 		
 		vigra::MultiArrayView<2, vigra::UInt8> roi = label_image.subarray(start, stop);
 
@@ -332,8 +339,8 @@ int main(int argc, char** argv) {
 		}
 
 		// sort neighbors according to distance
-		std::sort(nearest_neighbors.begin(), nearest_neighbors.end(), 
-			[](const TraxelWithDistance& a, const TraxelWithDistance& b){ return a.second < b.second; });
+		auto compareDistances = [](const TraxelWithDistance& a, const TraxelWithDistance& b){ return a.second < b.second; };
+		std::sort(nearest_neighbors.begin(), nearest_neighbors.end(), compareDistances);
 		
 		std::cout << "Distances after sorting:" << std::endl;
 		for(TraxelWithDistance& twd : nearest_neighbors)
@@ -366,10 +373,22 @@ int main(int argc, char** argv) {
 															t.features["Count"],
 															traxels_f1[nearest_neighbors[0].first].features["Count"], 
 															traxels_f1[nearest_neighbors[1].first].features["Count"]);
-			t.features["ParentChildrenAngle_RegionCenter"] = parent_children_angle_calculator->calculate(
+			float angle = parent_children_angle_calculator->calculate(
 															t.features["RegionCenter"],
 															traxels_f1[nearest_neighbors[0].first].features["RegionCenter"], 
-															traxels_f1[nearest_neighbors[1].first].features["RegionCenter"]);
+															traxels_f1[nearest_neighbors[1].first].features["RegionCenter"])[0];
+			if(nearest_neighbors.size() > 2)
+			{
+				angle = std::max(angle, parent_children_angle_calculator->calculate(
+															t.features["RegionCenter"],
+															traxels_f1[nearest_neighbors[1].first].features["RegionCenter"], 
+															traxels_f1[nearest_neighbors[2].first].features["RegionCenter"])[0]);
+				angle = std::max(angle, parent_children_angle_calculator->calculate(
+															t.features["RegionCenter"],
+															traxels_f1[nearest_neighbors[0].first].features["RegionCenter"], 
+															traxels_f1[nearest_neighbors[2].first].features["RegionCenter"])[0]);
+			}
+			t.features["ParentChildrenAngle_RegionCenter"] = { angle };
 		}
 		else
 		{
