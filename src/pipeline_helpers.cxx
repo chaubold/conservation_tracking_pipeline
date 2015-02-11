@@ -204,6 +204,22 @@ int read_features_from_file(
   return 0;
 }
 
+int read_region_features_from_file(
+  const std::string path,
+  std::vector<std::string>& feature_list)
+{
+  std::ifstream f(path.c_str());
+  if (!f.is_open()) {
+    return 1;
+  }
+  feature_list.clear();
+  std::string feature;
+  while(std::getline(f, feature)) {
+    feature_list.push_back(feature);
+  }
+  return 0;
+}
+
 /** @brief Read the random forests from the hdf5 files.
  */
 bool get_rfs_from_file(std::vector<vigra::RandomForest<unsigned> >& rfs, std::string fn, std::string path_in_file, int n_forests, int n_leading_zeros) {

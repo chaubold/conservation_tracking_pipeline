@@ -61,6 +61,11 @@ int read_features_from_file(
   const std::string path,
   StringDoublePairVectorType& features);
 
+// read region feature list from file
+int read_region_features_from_file(
+  const std::string path,
+  std::vector<std::string>& feature_list);
+
 
 // get random_forests from file
 bool get_rfs_from_file(std::vector<vigra::RandomForest<unsigned> >& rfs,

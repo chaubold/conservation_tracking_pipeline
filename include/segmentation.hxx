@@ -9,12 +9,10 @@
 #include <vigra/multi_convolution.hxx>
 #include <vigra/random_forest.hxx> /* for RandomForest */
 #include <vigra/accumulator.hxx> /* for accumulator chain */
+#include <vigra/hdf5impex.hxx> /* for hdf 5 import */
 
 // boost
 #include <boost/shared_ptr.hpp> /* for shared_ptr */
-
-// pgmlink
-#include <pgmlink/traxels.h> /* for Traxel and TraxelStore */
 
 namespace isbi_pipeline {
 
@@ -98,38 +96,6 @@ class SegmentationCalculator {
  private:
   boost::shared_ptr<FeatureCalculator<N> > feature_calculator_ptr_;
   const std::vector<RandomForestType> random_forests_;
-};
-
-template<int N>
-class TraxelExtractor {
- public:
-  typedef typename vigra::CoupledIteratorType<N, unsigned, unsigned>::type
-    CoupledIteratorType;
-  typedef typename vigra::acc::AccumulatorChainArray<
-    vigra::CoupledArrays<N, unsigned, unsigned>,
-    vigra::acc::Select<
-      vigra::acc::DataArg<1>,
-      vigra::acc::LabelArg<2>,
-      vigra::acc::Count,
-      vigra::acc::Coord<vigra::acc::Mean> >
-  > AccChainType;
-  TraxelExtractor(
-    unsigned int border_distance = 0,
-    unsigned int lower_size_lim = 0,
-    unsigned int upper_size_lim = 0);
-  int extract(
-    const Segmentation<N>& segmentation,
-    const int timestep,
-    pgmlink::TraxelStore& traxelstore) const;
- private:
-  int extract_for_label(
-    const AccChainType& acc_chain,
-    const size_t label_id,
-    const int timestep,
-    pgmlink::TraxelStore& traxelstore) const;
-  unsigned int border_distance_;
-  unsigned int lower_size_lim_;
-  unsigned int upper_size_lim_;
 };
 
 /*=============================================================================

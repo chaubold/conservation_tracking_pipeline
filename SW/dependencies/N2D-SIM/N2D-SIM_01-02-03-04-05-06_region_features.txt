@@ -1,0 +1,12 @@
+Coord<Principal<Kurtosis> >
+Coord<Principal<Skewness> >
+Count
+Kurtosis
+Maximum
+Mean
+Minimum
+RegionCenter
+RegionRadii
+Skewness
+Sum
+Variance

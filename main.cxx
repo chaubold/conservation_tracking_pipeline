@@ -30,6 +30,7 @@
 // own
 #include "pipeline_helpers.hxx"
 #include "segmentation.hxx"
+#include "traxel_extractor.hxx"
 #include "lineage.hxx"
 
 
@@ -53,7 +54,7 @@ typedef vigra::RandomForest<unsigned> RandomForestType;
 int main(int argc, char** argv) {
   try {
     // check for correct number of arguments
-    if (argc < 6) {
+    if (argc < 7) {
       throw isbi::ArgumentError();
     }
 
@@ -63,6 +64,7 @@ int main(int argc, char** argv) {
     isbi::rstrip(argv[3], '/');
     isbi::rstrip(argv[4], '/');
     isbi::rstrip(argv[5], '/');
+    isbi::rstrip(argv[6], '/');
     std::string dataset_folder(argv[1]);
     std::string dataset_sequence(argv[2]);
     std::string tif_dir_str(dataset_folder + "/" + dataset_sequence);
@@ -70,6 +72,7 @@ int main(int argc, char** argv) {
     std::string config_file_path(argv[3]);
     std::string rf_file_path(argv[4]);
     std::string feature_file_path(argv[5]);
+    std::string region_feature_file_path(argv[6]);
 
     fs::path tif_dir = fs::system_complete(tif_dir_str);
     fs::path res_dir = fs::system_complete(res_dir_str);
@@ -99,13 +102,22 @@ int main(int argc, char** argv) {
     }
 
     // get features used in project
-    std::string feature_list_path = dataset_folder + "/features.txt";
     StringDoublePairVectorType feature_list;
     int read_status = isbi::read_features_from_file(
       feature_file_path,
       feature_list);
     if (read_status == 1) {
-      throw std::runtime_error("Could not open file " + feature_list_path);
+      throw std::runtime_error("Could not open file " + feature_file_path);
+    }
+
+    // get the region features used in project
+    std::vector<std::string> region_feature_list;
+    read_status = isbi::read_region_features_from_file(
+      region_feature_file_path,
+      region_feature_list);
+    if (read_status == 1) {
+      throw std::runtime_error(
+        "Could not open file " + region_feature_file_path);
     }
 
     // get config
@@ -158,12 +170,12 @@ int main(int argc, char** argv) {
       vigra::ImageImportInfo info(filename.c_str());
       vigra::Shape2 shape(info.width(), info.height());
       // initialize some multi arrays
-      DataMatrixType src_unsmoothed(shape);
+      DataMatrixType image(shape);
       // read the image pixel data
-      vigra::importImage(info, vigra::destImage(src_unsmoothed));
+      vigra::importImage(info, vigra::destImage(image));
       std::cout << "Calculate features" << std::endl;
       isbi::Segmentation<2> segmentation;
-      seg_calc.calculate(src_unsmoothed, segmentation);
+      seg_calc.calculate(image, segmentation);
       // save the segmentation results
       std::stringstream segmentation_result_path;
       segmentation_result_path <<  tif_dir_str << "_RES/"
@@ -180,7 +192,12 @@ int main(int argc, char** argv) {
         vigra::ImageExportInfo(labelimage_path.str().c_str()));
       labelimage_fn_vec.push_back(labelimage_path.str());
       // create traxels and add them to the traxelstore
-      traxel_extractor.extract(segmentation, timestep, ts);
+      traxel_extractor.extract(
+        segmentation,
+        image,
+        timestep,
+        region_feature_list,
+        ts);
     }
     // end of iteration over all filenames/timesteps
 

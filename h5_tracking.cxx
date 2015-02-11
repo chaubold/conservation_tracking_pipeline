@@ -27,6 +27,7 @@
 // own
 #include "pipeline_helpers.hxx"
 #include "segmentation.hxx"
+#include "traxel_extractor.hxx"
 #include "lineage.hxx"
 
 
@@ -49,7 +50,7 @@ int main(int argc, char** argv) {
   // arg 1: dataset folder
   try {
     // check for correct number of arguments
-    if (argc < 4) {
+    if (argc < 5) {
       throw isbi::ArgumentError();
     }
     // TODO what about presmoothing?
@@ -59,10 +60,12 @@ int main(int argc, char** argv) {
     isbi::rstrip(argv[1], '/');
     isbi::rstrip(argv[2], '/');
     isbi::rstrip(argv[3], '/');
+    isbi::rstrip(argv[4], '/');
     std::string dataset_folder(argv[1]);
     std::string dataset_sequence(argv[2]);
     std::string h5_dir_str(dataset_folder + "/" + dataset_sequence + "_RES");
     std::string config_file_path(argv[3]);
+    std::string region_feature_file_path(argv[4]);
 
     fs::path h5_dir = fs::system_complete(h5_dir_str);
 
@@ -77,6 +80,16 @@ int main(int argc, char** argv) {
     // make unary for copying only filepaths that contain *.h5
     boost::function<bool (fs::directory_entry&)> h5_chooser = bind(
       isbi::contains_substring_boost_path, _1, ".h5");
+
+    // get the region features that should be calculated
+    std::vector<std::string> region_feature_list;
+    int read_status = isbi::read_region_features_from_file(
+      region_feature_file_path,
+      region_feature_list);
+    if (read_status == 1) {
+      throw std::runtime_error(
+        "Could not open file " + region_feature_file_path);
+    }
 
     // get config
     isbi::TrackingOptions options(config_file_path);
@@ -114,8 +127,15 @@ int main(int argc, char** argv) {
       // load the labelimage
       isbi::Segmentation<2> segmentation;
       segmentation.read_hdf5(filename, true);
+      // create an empty image
+      DataMatrixType empty_image(segmentation.label_image_.shape());
       // create traxels and add them to the traxelstore
-      traxel_extractor.extract(segmentation, timestep, ts);
+      traxel_extractor.extract(
+        segmentation,
+        empty_image,
+        timestep,
+        region_feature_list,
+        ts);
     }
 
     //=========================================================================
