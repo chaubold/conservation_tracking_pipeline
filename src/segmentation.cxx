@@ -222,7 +222,7 @@ int FeatureCalculator<2>::calculate(
       vigra::Shape3(image.shape(0), image.shape(1), offsets[fs] + size));
     if (!feature_scales_[fs].first.compare("GaussianSmoothing")) {
       calculate_gaussian_smoothing(image, features_v, feature_scales_[fs].second);
-    } else if (!feature_scales_[fs].first.compare("LaplacianOfGaussians")) {
+    } else if (!feature_scales_[fs].first.compare("LaplacianOfGaussian")) {
       calculate_laplacian_of_gaussians(image, features_v, feature_scales_[fs].second);
     } else if (!feature_scales_[fs].first.compare("GaussianGradientMagnitude")) {
       calculate_gaussian_gradient_magnitude(image, features_v, feature_scales_[fs].second);

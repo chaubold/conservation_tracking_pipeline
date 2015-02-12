@@ -66,6 +66,15 @@ int read_region_features_from_file(
   const std::string path,
   std::vector<std::string>& feature_list);
 
+// read tif image
+int read_tif_image(
+  const std::string path,
+  vigra::MultiArray<2, unsigned>& image);
+
+// save tif image
+int save_tif_image(
+  const std::string path,
+  const vigra::MultiArray<2, unsigned>& image);
 
 // get random_forests from file
 bool get_rfs_from_file(std::vector<vigra::RandomForest<unsigned> >& rfs,

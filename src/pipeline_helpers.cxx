@@ -110,6 +110,9 @@ std::string TrackingOptions::get_option<std::string>(
 
 bool TrackingOptions::is_legal() const {
   bool ret = check_option<std::string>("tracker");
+  ret = ret and check_option<int>("border");
+  ret = ret and check_option<int>("size_from");
+  ret = ret and check_option<int>("size_to");
   if (ret) {
     const std::string tracker_type = get_option<std::string>("tracker");
     // check the tracker options
@@ -220,6 +223,31 @@ int read_region_features_from_file(
   return 0;
 }
 
+int read_tif_image(
+  const std::string path,
+  vigra::MultiArray<2, unsigned>& image)
+{
+  // read the image
+  vigra::ImageImportInfo import_info(path.c_str());
+  vigra::Shape2 shape(import_info.width(), import_info.height());
+  // initialize the multi array
+  image.reshape(shape);
+  // read the image pixel data
+  vigra::importImage(import_info, vigra::destImage(image));
+  return 0;
+}
+
+int save_tif_image(
+  const std::string path,
+  const vigra::MultiArray<2, unsigned>& image)
+{
+  typedef vigra::MultiArray<2, unsigned short> UShortMatrixType;
+  vigra::exportImage(
+    vigra::srcImageRange(UShortMatrixType(image)),
+    vigra::ImageExportInfo(path.c_str()));
+  return 0;
+}
+
 /** @brief Read the random forests from the hdf5 files.
  */
 bool get_rfs_from_file(std::vector<vigra::RandomForest<unsigned> >& rfs, std::string fn, std::string path_in_file, int n_forests, int n_leading_zeros) {
@@ -271,9 +299,9 @@ EventVectorVectorType track(
       options.get_option<double>("y_range_0"),
       options.get_option<double>("z_range_0"),
       options.get_option<double>("time_range_1"),
-      options.get_option<double>("t_range_1"),
-      options.get_option<double>("t_range_1"),
-      options.get_option<double>("t_range_1"));
+      options.get_option<double>("x_range_1"),
+      options.get_option<double>("y_range_1"),
+      options.get_option<double>("z_range_1"));
     // build the tracker
     pgmlink::ConsTracking tracker(
       options.get_option<int   >("maxObj"),
