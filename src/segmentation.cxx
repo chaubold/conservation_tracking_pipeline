@@ -26,7 +26,7 @@ FeatureCalculator<N>::FeatureCalculator(
 {
   // initialize the feature dimension map
   feature_sizes_["GaussianSmoothing"] = 1;
-  feature_sizes_["LaplacianOfGaussians"] = 1;
+  feature_sizes_["LaplacianOfGaussian"] = 1;
   feature_sizes_["StructureTensorEigenvalues"] = N;
   feature_sizes_["HessianOfGaussianEigenvalues"] = N;
   feature_sizes_["GaussianGradientMagnitude"] = 1;
@@ -83,7 +83,7 @@ int FeatureCalculator<N>::calculate_laplacian_of_gaussians(
   vigra::MultiArrayView<N+1, DataType>& features,
   double feature_scale) const
 {
-  LOG("calculate laplacian of gaussians (" << feature_scale << ")");
+  LOG("calculate laplacian of gaussian (" << feature_scale << ")");
   vigra::MultiArrayView<N, DataType> results(features.template bind<N>(0));
   vigra::laplacianOfGaussianMultiArray(
     srcMultiArrayRange(image),
@@ -265,7 +265,7 @@ int FeatureCalculator<3>::calculate(
       vigra::Shape4(image.shape(0), image.shape(1), image.shape(2), offset+size));
     if (!it->first.compare("GaussianSmoothing")) {
       calculate_gaussian_smoothing(image, features_v, it->second);
-    } else if (!it->first.compare("LaplacianOfGaussians")) {
+    } else if (!it->first.compare("LaplacianOfGaussian")) {
       calculate_laplacian_of_gaussians(image, features_v, it->second);
     } else if (!it->first.compare("GaussianGradientMagnitude")) {
       calculate_gaussian_gradient_magnitude(image, features_v, it->second);
