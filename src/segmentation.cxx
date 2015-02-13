@@ -19,8 +19,8 @@ namespace isbi_pipeline {
 ////
 template<int N>
 FeatureCalculator<N>::FeatureCalculator(
-    const StringDoublePairVectorType& feature_scales,
-    double window_size) :
+    const StringDataPairVectorType& feature_scales,
+    DataType window_size) :
   feature_scales_(feature_scales),
   window_size_(window_size)
 {
@@ -52,7 +52,7 @@ template<int N>
 size_t FeatureCalculator<N>::get_feature_size() const {
   size_t size = 0;
   for (
-    StringDoublePairVectorType::const_iterator it = feature_scales_.begin();
+    StringDataPairVectorType::const_iterator it = feature_scales_.begin();
     it != feature_scales_.end();
     it++
   ) {
@@ -65,7 +65,7 @@ template<int N>
 int FeatureCalculator<N>::calculate_gaussian_smoothing(
   const vigra::MultiArrayView<N, DataType>& image,
   vigra::MultiArrayView<N+1, DataType>& features,
-  double feature_scale) const
+  DataType feature_scale) const
 {
   LOG("calculate gaussian smoothing (" << feature_scale << ")");
   vigra::MultiArrayView<N, DataType> results(features.template bind<N>(0));
@@ -81,7 +81,7 @@ template<int N>
 int FeatureCalculator<N>::calculate_laplacian_of_gaussians(
   const vigra::MultiArrayView<N, DataType>& image,
   vigra::MultiArrayView<N+1, DataType>& features,
-  double feature_scale) const
+  DataType feature_scale) const
 {
   LOG("calculate laplacian of gaussian (" << feature_scale << ")");
   vigra::MultiArrayView<N, DataType> results(features.template bind<N>(0));
@@ -97,7 +97,7 @@ template<int N>
 int FeatureCalculator<N>::calculate_gaussian_gradient_magnitude(
   const vigra::MultiArrayView<N, DataType>& image,
   vigra::MultiArrayView<N+1, DataType>& features,
-  double feature_scale) const
+  DataType feature_scale) const
 {
   LOG("calculate gaussian gradient magnitude (" << feature_scale << ")");
   vigra::MultiArrayView<N, DataType> results(features.template bind<2>(0));
@@ -119,7 +119,7 @@ template<int N>
 int FeatureCalculator<N>::calculate_difference_of_gaussians(
   const vigra::MultiArrayView<N, DataType>& image,
   vigra::MultiArrayView<N+1, DataType>& features,
-  double feature_scale) const
+  DataType feature_scale) const
 {
   LOG("calculate difference of gaussians (" << feature_scale << ")");
   vigra::MultiArray<N, DataType> temp(image.shape());
@@ -142,7 +142,7 @@ template<int N>
 int FeatureCalculator<N>::calculate_structure_tensor_eigenvalues(
   const vigra::MultiArrayView<N, DataType>& image,
   vigra::MultiArrayView<N+1, DataType>& features,
-  double feature_scale) const
+  DataType feature_scale) const
 {
   LOG("calculate structure tensor eigenvalues (" << feature_scale << ")");
   vigra::MultiArray<N, vigra::TinyVector<DataType, (N*(N+1))/2> > tensor(
@@ -166,7 +166,7 @@ template<int N>
 int FeatureCalculator<N>::calculate_hessian_of_gaussian_eigenvalues(
   const vigra::MultiArrayView<N, DataType>& image,
   vigra::MultiArrayView<N+1, DataType>& features,
-  double feature_scale) const
+  DataType feature_scale) const
 {
   LOG("calculate hessian of gaussian eigenvalues (" << feature_scale << ")");
   vigra::MultiArray<N, vigra::TinyVector<DataType, (N*(N+1))/2> > hessian(
@@ -200,7 +200,7 @@ int FeatureCalculator<2>::calculate(
   
   // store all offsets
   for (
-    StringDoublePairVectorType::const_iterator it = feature_scales_.begin();
+    StringDataPairVectorType::const_iterator it = feature_scales_.begin();
     it != feature_scales_.end();
     it++
   ) 
@@ -252,7 +252,7 @@ int FeatureCalculator<3>::calculate(
   features.reshape(vigra::Shape4(
     image.shape(0), image.shape(1), image.shape(2), get_feature_size()));
   for (
-    StringDoublePairVectorType::const_iterator it = feature_scales_.begin();
+    StringDataPairVectorType::const_iterator it = feature_scales_.begin();
     it != feature_scales_.end();
     it++
   ) {
@@ -321,11 +321,11 @@ int Segmentation<N>::read_hdf5(
   const bool segmentation_only)
 {
   // load data
-  read_hdf5_array<N, unsigned>(
+  read_hdf5_array<N, LabelType>(
     filename,
     "/segmentation/segmentation",
     segmentation_image_);
-  read_hdf5_array<N, unsigned>(
+  read_hdf5_array<N, LabelType>(
     filename,
     "/segmentation/labels",
     label_image_);
@@ -340,7 +340,7 @@ int Segmentation<N>::read_hdf5(
       prediction_map_);
   }
   // read label count
-  unsigned int min, max;
+  LabelType min, max;
   label_image_.minmax(&min, &max);
   label_count_ = max;
   return 0;
@@ -411,7 +411,7 @@ int SegmentationCalculator<N>::calculate(
 
   LOG("Assign the segmentation labels");
   // assign the labels
-  typename vigra::MultiArrayView<N, unsigned>::iterator seg_it;
+  typename vigra::MultiArrayView<N, LabelType>::iterator seg_it;
   seg_it = segmentation.segmentation_image_.begin();
   for (size_t n = 0; n < pixel_count; n++, seg_it++) {
     if (prediction_map_view(n, 1) > prediction_map_view(n, 0)) {

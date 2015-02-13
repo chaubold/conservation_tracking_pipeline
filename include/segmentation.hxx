@@ -14,11 +14,12 @@
 // boost
 #include <boost/shared_ptr.hpp> /* for shared_ptr */
 
+// own
+#include "common.h"
+
 namespace isbi_pipeline {
 
-typedef float DataType;
-typedef std::vector<std::pair<std::string, double> > StringDoublePairVectorType;
-typedef vigra::RandomForest<unsigned> RandomForestType;
+namespace acc = vigra::acc;
 
 template<int N, typename T>
 int read_hdf5_array(
@@ -30,8 +31,8 @@ template<int N>
 class FeatureCalculator {
  public:
   FeatureCalculator(
-    const StringDoublePairVectorType& feature_scales,
-    double window_size = 3.5);
+    const StringDataPairVectorType& feature_scales,
+    DataType window_size = 3.5);
   size_t get_feature_size(const std::string& feature_name) const;
   size_t get_feature_size() const;
   int calculate(
@@ -41,38 +42,38 @@ class FeatureCalculator {
   int calculate_gaussian_smoothing(
     const vigra::MultiArrayView<N, DataType>& image,
     vigra::MultiArrayView<N+1, DataType>& features,
-    double feature_scale) const;
+    DataType feature_scale) const;
   int calculate_laplacian_of_gaussians(
     const vigra::MultiArrayView<N, DataType>& image,
     vigra::MultiArrayView<N+1, DataType>& features,
-    double feature_scale) const;
+    DataType feature_scale) const;
   int calculate_gaussian_gradient_magnitude(
     const vigra::MultiArrayView<N, DataType>& image,
     vigra::MultiArrayView<N+1, DataType>& features,
-    double feature_scale) const;
+    DataType feature_scale) const;
   int calculate_difference_of_gaussians(
     const vigra::MultiArrayView<N, DataType>& image,
     vigra::MultiArrayView<N+1, DataType>& features,
-    double feature_scale) const;
+    DataType feature_scale) const;
   int calculate_structure_tensor_eigenvalues(
     const vigra::MultiArrayView<N, DataType>& image,
     vigra::MultiArrayView<N+1, DataType>& features,
-    double feature_scale) const;
+    DataType feature_scale) const;
   int calculate_hessian_of_gaussian_eigenvalues(
     const vigra::MultiArrayView<N, DataType>& image,
     vigra::MultiArrayView<N+1, DataType>& features,
-    double feature_scale) const;
+    DataType feature_scale) const;
   
-  const StringDoublePairVectorType& feature_scales_;
-  double window_size_;
+  const StringDataPairVectorType& feature_scales_;
+  DataType window_size_;
   std::map<std::string, size_t> feature_sizes_;
   vigra::ConvolutionOptions<N> conv_options_;
 };
 
 template<int N>
 struct Segmentation {
-  vigra::MultiArray<N, unsigned> segmentation_image_;
-  vigra::MultiArray<N, unsigned> label_image_;
+  vigra::MultiArray<N, LabelType> segmentation_image_;
+  vigra::MultiArray<N, LabelType> label_image_;
   vigra::MultiArray<N+1, DataType> feature_image_;
   vigra::MultiArray<N+1, DataType> prediction_map_;
   size_t label_count_;
@@ -89,13 +90,13 @@ class SegmentationCalculator {
  public:
   SegmentationCalculator(
     boost::shared_ptr<FeatureCalculator<N> > feature_calculator_ptr,
-    const std::vector<RandomForestType>& random_forests);
+    const RandomForestVectorType& random_forests);
   int calculate(
     const vigra::MultiArray<N, DataType>& image,
     Segmentation<N>& segmentation) const;
  private:
   boost::shared_ptr<FeatureCalculator<N> > feature_calculator_ptr_;
-  const std::vector<RandomForestType> random_forests_;
+  const RandomForestVectorType random_forests_;
 };
 
 /*=============================================================================

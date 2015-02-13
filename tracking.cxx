@@ -25,6 +25,7 @@
 #include <pgmlink/tracking.h>
 
 // own
+#include "common.h"
 #include "pipeline_helpers.hxx"
 #include "segmentation.hxx"
 #include "traxel_extractor.hxx"
@@ -35,16 +36,9 @@
 namespace fs = boost::filesystem;
 namespace isbi = isbi_pipeline;
 
-// Scalar types
-typedef isbi::FeatureType DataType;
-// Container types of the standard library
-typedef std::vector<std::pair<std::string, double> > StringDoublePairVectorType;
-typedef std::map<std::string, double> StringDoubleMapType;
 // Vigra MultiArray types
-typedef vigra::MultiArray<2, DataType> DataMatrixType;
-typedef vigra::MultiArray<2, unsigned short> UShortMatrixType;
-// Further vigra types
-typedef vigra::RandomForest<unsigned> RandomForestType;
+typedef vigra::MultiArray<2, isbi::DataType> DataMatrixType;
+typedef vigra::MultiArray<2, isbi::LabelType> LabelMatrixType;
 
 int main(int argc, char** argv) {
   // arg 1: dataset folder
@@ -67,9 +61,9 @@ int main(int argc, char** argv) {
     std::string classifier_file_path(argv[5]);
     std::string region_feature_file_path(argv[6]);
 
-    fs::path raw_dir = fs::system_complete(raw_dir_str);
-    fs::path seg_dir = fs::system_complete(seg_dir_str);
-    fs::path res_dir = fs::system_complete(seg_dir_str);
+    isbi::PathType raw_dir = fs::system_complete(raw_dir_str);
+    isbi::PathType seg_dir = fs::system_complete(seg_dir_str);
+    isbi::PathType res_dir = fs::system_complete(seg_dir_str);
 
     // check validity of dataset variables
     if (!fs::exists(raw_dir)) {
@@ -91,7 +85,7 @@ int main(int argc, char** argv) {
     }
 
     // make unary for copying only filepaths that contain *.tif
-    boost::function<bool (fs::directory_entry&)> tif_chooser = bind(
+    boost::function<bool (isbi::DirectoryEntryType&)> tif_chooser = bind(
       isbi::contains_substring_boost_path, _1, ".tif");
 
     // get config
@@ -103,14 +97,14 @@ int main(int argc, char** argv) {
     // check if we have conservation tracking - get the random forests and
     // region features if applicable
     std::vector<std::string> region_feature_list;
-    std::vector<RandomForestType> region_feature_rfs;
+    isbi::RandomForestVectorType region_feature_rfs;
     unsigned int max_object_num = 0;
     if (!options.get_option<std::string>("tracker").compare("ConsTracking")) {
       // get the region features used in project
       bool read_status = isbi::read_region_features_from_file(
         region_feature_file_path,
         region_feature_list);
-      if (!read_status) {
+      if (read_status) {
         throw std::runtime_error(
           "Could not open file " + region_feature_file_path);
       }
@@ -119,8 +113,8 @@ int main(int argc, char** argv) {
         region_feature_rfs,
         classifier_file_path,
         "CountClassification/ClassifierForests/Forest",
-        4,
-        1);
+        1,
+        4);
       // get the max_object_num
       max_object_num = options.get_option<int>("maxObj");
       if (!read_status) {
@@ -136,19 +130,19 @@ int main(int argc, char** argv) {
     // write results to <dataset_folder>/<dataset_sequence_segmentation>
 
     int timestep = 0;
-    pgmlink::TraxelStore ts;
+    isbi::TraxelStoreType ts;
     // sort filenames
-    std::vector<fs::path> raw_fn_vec;
+    std::vector<isbi::PathType> raw_fn_vec;
     isbi::copy_if_own(
-      fs::directory_iterator(raw_dir),
-      fs::directory_iterator(),
+      isbi::DirectoryIteratorType(raw_dir),
+      isbi::DirectoryIteratorType(),
       std::back_inserter(raw_fn_vec),
       tif_chooser);
     std::sort(raw_fn_vec.begin(), raw_fn_vec.end());
-    std::vector<fs::path> seg_fn_vec;
+    std::vector<isbi::PathType> seg_fn_vec;
     isbi::copy_if_own(
-      fs::directory_iterator(seg_dir),
-      fs::directory_iterator(),
+      isbi::DirectoryIteratorType(seg_dir),
+      isbi::DirectoryIteratorType(),
       std::back_inserter(seg_fn_vec),
       tif_chooser);
     std::sort(seg_fn_vec.begin(), seg_fn_vec.end());
@@ -167,7 +161,7 @@ int main(int argc, char** argv) {
       options.get_option<int>("size_to"));
 
     // iterate over the filenames TODO timestep counting not correct
-    std::vector<fs::path>::iterator raw_it, seg_it;
+    std::vector<isbi::PathType>::iterator raw_it, seg_it;
     for (
       raw_it = raw_fn_vec.begin(), seg_it = seg_fn_vec.begin();
       raw_it != raw_fn_vec.end();
@@ -178,13 +172,13 @@ int main(int argc, char** argv) {
       std::cout << "processing image " + raw_filename + " ...\n";
       std::cout << "with segmentation " + seg_filename + " ...\n";
       // load the raw image
-      vigra::MultiArray<2, unsigned> image;
+      DataMatrixType image;
       isbi::read_tif_image(raw_filename, image);
       // load the label image
       isbi::Segmentation<2> segmentation;
       isbi::read_tif_image(seg_filename, segmentation.label_image_);
       // read label count
-      unsigned int min, max;
+      isbi::LabelType min, max;
       segmentation.label_image_.minmax(&min, &max);
       segmentation.label_count_ = max;
       // create traxels and add them to the traxelstore
@@ -205,7 +199,7 @@ int main(int argc, char** argv) {
     // relabel the image
     timestep = 0;
     for (
-      std::vector<fs::path>::iterator seg_it = seg_fn_vec.begin();
+      std::vector<isbi::PathType>::iterator seg_it = seg_fn_vec.begin();
       seg_it != seg_fn_vec.end();
       seg_it++, timestep++)
     {

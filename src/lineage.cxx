@@ -59,7 +59,7 @@ void Lineage::handle_move(const pgmlink::Event& event, const int timestep) {
     start_track(parent_index);
   }
   // handle the move
-  unsigned track_index = traxel_track_map_[parent_index];
+  LabelType track_index = traxel_track_map_[parent_index];
   track_traxel_map_[track_index].push_back(child_index);
   traxel_track_map_[child_index] = track_index;
 }
@@ -84,10 +84,10 @@ void Lineage::handle_division(const pgmlink::Event& event, const int timestep) {
 
 void Lineage::start_track(
   const TraxelIndexType& traxel_index,
-  const unsigned parent_track_index)
+  const LabelType parent_track_index)
 {
   // get the new unique index of this track
-  unsigned track_index = track_count_ + track_index_offset_;
+  LabelType track_index = track_count_ + track_index_offset_;
   track_count_++;
   // map the traxel index to this track index
   traxel_track_map_[traxel_index] = track_index;
@@ -108,7 +108,7 @@ std::ostream& operator<<(std::ostream& s, const Lineage& lineage) {
     const TraxelIndexVectorType& traxel_index_vector = it->second;
     int e_timestep = traxel_index_vector.front().first;
     int l_timestep = traxel_index_vector.back().first;
-    std::map<unsigned, unsigned>::const_iterator parent_track_it =
+    std::map<LabelType, LabelType>::const_iterator parent_track_it =
       lineage.track_track_parent_map_.find(it->first);
     if (parent_track_it == lineage.track_track_parent_map_.end()) {
       throw std::runtime_error("Parent track id does not exist");

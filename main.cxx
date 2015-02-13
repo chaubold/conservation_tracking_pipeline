@@ -1,7 +1,3 @@
-/* TODO
- * do label image calculations with unsigned short?
- */
-
 // stl
 #include <stdexcept>
 #include <iostream>
@@ -16,6 +12,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
+#include <boost/shared_ptr.hpp>
 
 // vigra
 #include <vigra/impex.hxx>
@@ -24,10 +21,10 @@
 #include <vigra/random_forest.hxx>
 
 // pgmlink
-#include <pgmlink/traxels.h>
 #include <pgmlink/tracking.h>
 
 // own
+#include "common.h"
 #include "pipeline_helpers.hxx"
 #include "segmentation.hxx"
 #include "traxel_extractor.hxx"
@@ -38,18 +35,9 @@
 namespace fs = boost::filesystem;
 namespace isbi = isbi_pipeline;
 
-// Typedefs for convenience
-// Scalar types
-typedef isbi::FeatureType DataType;
-// Container types of the standard library
-typedef std::vector<std::pair<std::string, double> > StringDoublePairVectorType;
-typedef std::map<std::string, double> StringDoubleMapType;
 // Vigra MultiArray types
-typedef vigra::MultiArray<2, DataType> DataMatrixType;
-typedef vigra::MultiArray<2, unsigned> UIntMatrixType;
-typedef vigra::MultiArray<2, unsigned short> UShortMatrixType;
-// Further vigra types
-typedef vigra::RandomForest<unsigned> RandomForestType;
+typedef vigra::MultiArray<2, isbi::DataType> DataMatrixType;
+typedef vigra::MultiArray<2, isbi::LabelType> LabelMatrixType;
 
 int main(int argc, char** argv) {
   try {
@@ -70,9 +58,9 @@ int main(int argc, char** argv) {
     std::string feature_file_path(argv[6]);
     std::string region_feature_file_path(argv[7]);
 
-    fs::path raw_dir = fs::system_complete(raw_dir_str);
-    fs::path seg_dir = fs::system_complete(seg_dir_str);
-    fs::path res_dir = fs::system_complete(res_dir_str);
+    isbi::PathType raw_dir = fs::system_complete(raw_dir_str);
+    isbi::PathType seg_dir = fs::system_complete(seg_dir_str);
+    isbi::PathType res_dir = fs::system_complete(res_dir_str);
 
     // check validity of dataset variables
     if (!fs::exists(raw_dir)) {
@@ -96,17 +84,17 @@ int main(int argc, char** argv) {
     }
 
     // make unary for copying only filepaths that contain *.tif
-    boost::function<bool (fs::directory_entry&)> tif_chooser = bind(
+    boost::function<bool (isbi::DirectoryEntryType&)> tif_chooser = bind(
       isbi::contains_substring_boost_path, _1, ".tif");
 
     // load segmentation classifier
-    std::vector<RandomForestType> rfs;
+    isbi::RandomForestVectorType rfs;
     if (!(isbi::get_rfs_from_file(rfs, classifier_file_path))) {
       throw std::runtime_error("Could not load Random Forest classifier!");
     }
 
     // get features used in project
-    StringDoublePairVectorType feature_list;
+    isbi::StringDataPairVectorType feature_list;
     int read_status = isbi::read_features_from_file(
       feature_file_path,
       feature_list);
@@ -123,7 +111,7 @@ int main(int argc, char** argv) {
     // check if we have conservation tracking - get the random forests and
     // region features if applicable
     std::vector<std::string> region_feature_list;
-    std::vector<RandomForestType> region_feature_rfs;
+    isbi::RandomForestVectorType region_feature_rfs;
     unsigned int max_object_num = 0;
     if (!options.get_option<std::string>("tracker").compare("ConsTracking")) {
       // get the region features used in project
@@ -158,10 +146,10 @@ int main(int argc, char** argv) {
     int timestep = 0;
     pgmlink::TraxelStore ts;
     // sort filenames
-    std::vector<fs::path> fn_vec;
+    std::vector<isbi::PathType> fn_vec;
     isbi::copy_if_own(
-      fs::directory_iterator(raw_dir),
-      fs::directory_iterator(),
+      isbi::DirectoryIteratorType(raw_dir),
+      isbi::DirectoryIteratorType(),
       std::back_inserter(fn_vec),
       tif_chooser);
     std::sort(fn_vec.begin(), fn_vec.end());
@@ -182,7 +170,7 @@ int main(int argc, char** argv) {
 
     // iterate over the filenames TODO timestep counting not correct
     for (
-      std::vector<fs::path>::iterator dir_itr = fn_vec.begin();
+      std::vector<isbi::PathType>::iterator dir_itr = fn_vec.begin();
       dir_itr != fn_vec.end();
       ++dir_itr, ++timestep)
     {
@@ -196,7 +184,7 @@ int main(int argc, char** argv) {
         continue;
       }
       // read the image
-      UIntMatrixType image;
+      DataMatrixType image;
       isbi::read_tif_image(filename.c_str(), image);
       // calculate the features
       std::cout << "Calculate features" << std::endl;
@@ -241,7 +229,7 @@ int main(int argc, char** argv) {
       fn_it != labelimage_fn_vec.end();
       fn_it++, timestep++ )
     {
-      UIntMatrixType labelimage;
+      LabelMatrixType labelimage;
       // read the label image
       isbi::read_tif_image(*fn_it, labelimage);
       // relabel the label image

@@ -22,8 +22,8 @@
 #include "pipeline_helpers.hxx"
 
 namespace isbi_pipeline {
+
 // local typdef
-typedef std::map<std::string, std::string> StringStringMapType;
 typedef StringStringMapType::const_iterator StringStringMapConstItType;
 
 // local functions
@@ -189,7 +189,7 @@ std::string zero_padding(int num, int n_zeros) {
  */
 int read_features_from_file(
   const std::string path,
-  StringDoublePairVectorType& features)
+  StringDataPairVectorType& features)
 {
   std::ifstream f(path.c_str());
   if (!f.is_open()) {
@@ -223,38 +223,19 @@ int read_region_features_from_file(
   return 0;
 }
 
-int read_tif_image(
-  const std::string path,
-  vigra::MultiArray<2, unsigned>& image)
-{
-  // read the image
-  vigra::ImageImportInfo import_info(path.c_str());
-  vigra::Shape2 shape(import_info.width(), import_info.height());
-  // initialize the multi array
-  image.reshape(shape);
-  // read the image pixel data
-  vigra::importImage(import_info, vigra::destImage(image));
-  return 0;
-}
-
-int save_tif_image(
-  const std::string path,
-  const vigra::MultiArray<2, unsigned>& image)
-{
-  typedef vigra::MultiArray<2, unsigned short> UShortMatrixType;
-  vigra::exportImage(
-    vigra::srcImageRange(UShortMatrixType(image)),
-    vigra::ImageExportInfo(path.c_str()));
-  return 0;
-}
-
 /** @brief Read the random forests from the hdf5 files.
  */
-bool get_rfs_from_file(std::vector<vigra::RandomForest<unsigned> >& rfs, std::string fn, std::string path_in_file, int n_forests, int n_leading_zeros) {
+bool get_rfs_from_file(
+  RandomForestVectorType& rfs,
+  std::string fn,
+  std::string path_in_file,
+  int n_forests,
+  int n_leading_zeros)
+{
   bool read_successful = false;
   for (int n = 0; n < n_forests; ++n) {
     std::string rf_path = path_in_file + zero_padding(n, n_leading_zeros);
-    rfs.push_back(vigra::RandomForest<unsigned>());
+    rfs.push_back(RandomForestType());
     read_successful = vigra::rf_import_HDF5(rfs[n], fn, rf_path);
   }
   return read_successful;
@@ -265,7 +246,7 @@ bool get_rfs_from_file(std::vector<vigra::RandomForest<unsigned> >& rfs, std::st
 // TODO the whole following code is ugly -> will someone please come
 // up with a cool idea?
 EventVectorVectorType track(
-  pgmlink::TraxelStore& ts,
+  TraxelStoreType& ts,
   const TrackingOptions& options)
 {
   const std::string& tracker_type = options.get_option<std::string>("tracker");
@@ -349,7 +330,10 @@ bool contains_substring(std::string str, std::string substr) {
 
 /** @brief Check if a boost path name contains a substring.
  */
-bool contains_substring_boost_path(const boost::filesystem::directory_entry& p, std::string substr) {
+bool contains_substring_boost_path(
+  const DirectoryEntryType& p,
+  std::string substr)
+{
   return contains_substring(p.path().string(), substr);
 }
 

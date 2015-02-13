@@ -14,7 +14,8 @@
 
 namespace isbi_pipeline {
 
-void dump(const std::vector<float> vector) {
+template<typename T>
+void dump(const std::vector<T> vector) {
   std::cout << "(";
   for(float entry : vector) {
     std::cout << entry << ", ";
@@ -22,9 +23,9 @@ void dump(const std::vector<float> vector) {
   std::cout << ")";
 }
 
-void dump(const pgmlink::FeatureMap& feature_map) {
+void dump(const FeatureMapType& feature_map) {
   for(
-    pgmlink::FeatureMap::const_iterator f_it = feature_map.begin();
+    FeatureMapType::const_iterator f_it = feature_map.begin();
     f_it != feature_map.end();
     f_it++)
   {
@@ -35,68 +36,64 @@ void dump(const pgmlink::FeatureMap& feature_map) {
 }
 
 template<typename T>
-void set_feature(
-  pgmlink::FeatureMap& feature_map,
-  const std::string& name,
-  T value)
-{
-  pgmlink::feature_array f;
-  f.push_back(FeatureType(value));
+void set_feature(FeatureMapType& feature_map, const std::string& name, T value) {
+  FeatureArrayType f;
+  f.push_back(static_cast<FeatureType>(value));
   feature_map[name] = f;
 }
 
 template<>
 void set_feature(
-  pgmlink::FeatureMap& feature_map,
+  FeatureMapType& feature_map,
   const std::string& name,
-  vigra::TinyVector<double,2> value)
+  vigra::TinyVector<double, 2> value)
 {
-  pgmlink::feature_array f;
+  FeatureArrayType f;
   f.clear();
-  f.push_back(FeatureType(value[0]));
-  f.push_back(FeatureType(value[1]));
+  f.push_back(static_cast<FeatureType>(value[0]));
+  f.push_back(static_cast<FeatureType>(value[1]));
   feature_map[name] = f;
 }
 
 template<>
 void set_feature(
-  pgmlink::FeatureMap& feature_map,
+  FeatureMapType& feature_map,
   const std::string& name,
-  vigra::TinyVector<double,3> value)
+  vigra::TinyVector<double, 3> value)
 {
-  pgmlink::feature_array f;
+  FeatureArrayType f;
   f.clear();
-  f.push_back(FeatureType(value[0]));
-  f.push_back(FeatureType(value[1]));
-  f.push_back(FeatureType(value[2]));
+  f.push_back(static_cast<FeatureType>(value[0]));
+  f.push_back(static_cast<FeatureType>(value[1]));
+  f.push_back(static_cast<FeatureType>(value[2]));
   feature_map[name] = f;
 }
 
 template<int N, typename T1, typename T2>
 void set_feature_with_offset(
-  pgmlink::FeatureMap& feature_map,
+  FeatureMapType& feature_map,
   const std::string& name,
   vigra::TinyVector<T1,N> value,
   vigra::TinyVector<T2,N> offset)
 {
-  pgmlink::feature_array f;
+  FeatureArrayType f;
   f.clear();
   for(int i = 0; i < N; i++) {
-    f.push_back(FeatureType(value[i] + offset[i]));
+    f.push_back(static_cast<FeatureType>(value[i] + offset[i]));
   }
   feature_map[name] = f;
 }
 
 template<>
 void set_feature(
-  pgmlink::FeatureMap& feature_map,
+  FeatureMapType& feature_map,
   const std::string& name,
-  vigra::linalg::Matrix<double> value)
+  vigra::linalg::Matrix<DataType> value)
 {
-  pgmlink::feature_array f;
+  FeatureArrayType f;
   f.clear();
   for(auto it = value.begin(); it != value.end(); ++it) {
-    f.push_back(*it);
+    f.push_back(static_cast<FeatureType>(*it));
   }
   feature_map[name] = f;
 }
@@ -120,7 +117,7 @@ template<int N>
 TraxelExtractor<N>::TraxelExtractor(
     unsigned int max_object_num,
     const std::vector<std::string> feature_selection,
-    const std::vector<isbi_pipeline::RandomForestType>& random_forests,
+    const RandomForestVectorType& random_forests,
     unsigned int border_distance,
     unsigned int lower_size_lim,
     unsigned int upper_size_lim) :
@@ -137,9 +134,9 @@ TraxelExtractor<N>::TraxelExtractor(
 template<int N>
 int TraxelExtractor<N>::extract(
   const Segmentation<N>& segmentation,
-  const vigra::MultiArrayView<N, unsigned>& image,
+  const vigra::MultiArrayView<N, DataType>& image,
   const int timestep,
-  pgmlink::TraxelStore& traxelstore) const
+  TraxelStoreType& traxelstore) const
 {
   LOG("Extract traxel");
   int return_status = 0;
@@ -176,14 +173,14 @@ int TraxelExtractor<N>::extract_for_label(
   const AccChainType& acc_chain,
   const size_t label_id,
   const int timestep,
-  pgmlink::TraxelStore& traxelstore) const
+  TraxelStoreType& traxelstore) const
 {
   int return_status = 0;
   // get the feature map
-  pgmlink::FeatureMap feature_map;
+  FeatureMapType feature_map;
   fill_feature_map(acc_chain, label_id, feature_map);
   // get the object size
-  float size = acc::get<acc::Count>(acc_chain, label_id);
+  DataType size = acc::get<acc::Count>(acc_chain, label_id);
   feature_map["count"].push_back(size);
   // filter size
   bool fits_lower_lim = ((lower_size_lim_ == 0) or (size >= lower_size_lim_));
@@ -250,7 +247,7 @@ template<int N>
 int TraxelExtractor<N>::fill_feature_map(
   const AccChainType& acc_chain,
   const size_t label_id,
-  pgmlink::FeatureMap& feature_map) const
+  FeatureMapType& feature_map) const
 {
   int ret = 0;
   // local typedefs
@@ -330,7 +327,7 @@ int TraxelExtractor<N>::fill_feature_map(
 
 template<int N>
 int TraxelExtractor<N>::get_detection_probability(
-  pgmlink::FeatureMap& feature_map) const
+  FeatureMapType& feature_map) const
 {
   // get the size of the feature vector
   size_t feature_size = 0;
@@ -365,7 +362,7 @@ int TraxelExtractor<N>::get_detection_probability(
     probabilities += probabilities_temp;
   }
   // fill the feature map
-  pgmlink::feature_array& det_array = feature_map["detProb"];
+  FeatureArrayType& det_array = feature_map["detProb"];
   det_array.clear();
   for (auto it = probabilities.begin(); it != probabilities.end(); it++) {
     det_array.push_back(*it);

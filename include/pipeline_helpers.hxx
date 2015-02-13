@@ -22,12 +22,10 @@
 #include <pgmlink/tracking.h>
 #include <pgmlink/traxels.h>
 
-namespace isbi_pipeline {
+// own
+#include "common.h"
 
-typedef float FeatureType;
-typedef std::vector<pgmlink::Event> EventVectorType;
-typedef std::vector<EventVectorType> EventVectorVectorType;
-typedef std::vector<std::pair<std::string, double> > StringDoublePairVectorType;
+namespace isbi_pipeline {
 
 // ArgumentError class
 class ArgumentError : public std::exception {
@@ -43,7 +41,7 @@ class TrackingOptions {
   template<typename T> bool check_option(const std::string key) const;
   template<typename T> T get_option(const std::string key) const;
  private:
-  std::map<std::string, std::string> options_map_;
+  StringStringMapType options_map_;
 };
 
 
@@ -59,7 +57,7 @@ std::string zero_padding(int num, int n_zeros);
 // read features from csv_style file
 int read_features_from_file(
   const std::string path,
-  StringDoublePairVectorType& features);
+  StringDataPairVectorType& features);
 
 // read region feature list from file
 int read_region_features_from_file(
@@ -67,25 +65,24 @@ int read_region_features_from_file(
   std::vector<std::string>& feature_list);
 
 // read tif image
-int read_tif_image(
-  const std::string path,
-  vigra::MultiArray<2, unsigned>& image);
+template<typename T>
+int read_tif_image(const std::string path, vigra::MultiArray<2, T>& image);
 
 // save tif image
-int save_tif_image(
-  const std::string path,
-  const vigra::MultiArray<2, unsigned>& image);
+template<typename T>
+int save_tif_image(const std::string path, const vigra::MultiArray<2, T>& image);
 
 // get random_forests from file
-bool get_rfs_from_file(std::vector<vigra::RandomForest<unsigned> >& rfs,
-                       std::string fn,
-                       std::string path_in_file = "PixelClassification/ClassifierForests/Forest",
-                       int n_forests = 10,
-                       int n_leading_zeros = 4);
+bool get_rfs_from_file(
+  RandomForestVectorType& rfs,
+  std::string fn,
+  std::string path_in_file = "PixelClassification/ClassifierForests/Forest",
+  int n_forests = 10,
+  int n_leading_zeros = 4);
 
 
 // do the tracking
-EventVectorVectorType track(pgmlink::TraxelStore& ts, const TrackingOptions& options);
+EventVectorVectorType track(TraxelStoreType& ts, const TrackingOptions& options);
 
 
 // helper function to iterate over tif only
@@ -93,21 +90,56 @@ bool contains_substring(std::string str, std::string substr);
 
 
 // same for boost_path
-bool contains_substring_boost_path(const boost::filesystem::directory_entry& p, std::string substr);
+bool contains_substring_boost_path(
+  const DirectoryEntryType& p,
+  std::string substr);
 
 
 // copy_if_own because not using c++11
 template <class InputIterator, class OutputIterator, class UnaryPredicate>
-OutputIterator copy_if_own (InputIterator first, InputIterator last, OutputIterator result, UnaryPredicate pred);
+OutputIterator copy_if_own (
+  InputIterator first,
+  InputIterator last,
+  OutputIterator result,
+  UnaryPredicate pred);
 
 
 /* -------------------------------------------------- */
 /*                   IMPLEMENTATION                   */
 /* -------------------------------------------------- */
 
+template<typename T>
+int read_tif_image(
+  const std::string path,
+  vigra::MultiArray<2, T>& image)
+{
+  // read the image
+  vigra::ImageImportInfo import_info(path.c_str());
+  vigra::Shape2 shape(import_info.width(), import_info.height());
+  // initialize the multi array
+  image.reshape(shape);
+  // read the image pixel data
+  vigra::importImage(import_info, vigra::destImage(image));
+  return 0;
+}
+
+template<typename T>
+int save_tif_image(
+  const std::string path,
+  const vigra::MultiArray<2, T>& image)
+{
+  vigra::exportImage(
+    vigra::srcImageRange(image),
+    vigra::ImageExportInfo(path.c_str()));
+  return 0;
+}
 
 template <class InputIterator, class OutputIterator, class UnaryPredicate>
-OutputIterator copy_if_own (InputIterator first, InputIterator last, OutputIterator result, UnaryPredicate pred)
+OutputIterator copy_if_own(
+  InputIterator first,
+  InputIterator last,
+  OutputIterator result,
+  UnaryPredicate pred)
 {
   while (first!=last) {
     if (pred(*first)) {
