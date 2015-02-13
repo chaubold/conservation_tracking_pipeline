@@ -63,3 +63,29 @@ if __name__ == "__main__":
 
 		with open(args.out_path + '/division_features.txt', 'w') as out_f:
 			writeSelectedRegionFeatures(out_f, in_f['DivisionDetection/SelectedFeatures'])
+
+		with open(args.out_path + '/tracking_config.txt', 'w') as out_f:
+			params = in_f['ConservationTracking/Parameters/0']
+
+			if params['z_range'][1] - params['z_range'][0] == 1:
+				out_f.write('nDim,2\n')
+			else:
+				out_f.write('nDim,3\n')
+
+			for key in params.keys():
+				try:
+					if len(params[key].value) > 1:
+						for i in range(len(params[key].value)):
+							out_f.write('{}_{},{}\n'.format(key, i, params[key].value[i]))
+					elif len(params[key].value) == 1:
+						out_f.write('{},{}\n'.format(key, params[key].value[0]))
+					else:
+						raise Exception("nothing")
+				except:
+					if params[key].dtype == np.dtype('bool'):
+						if params[key].value:
+							out_f.write('{},1\n'.format(key))
+						else:
+							out_f.write('{},0\n'.format(key))
+					else:
+						out_f.write('{},{}\n'.format(key, params[key].value))
