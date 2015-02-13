@@ -1,5 +1,6 @@
 /* TODO
  * implement border width
+ * merge division feature extractor with traxel extractor
  */
 
 #include "traxel_extractor.hxx"
@@ -144,9 +145,10 @@ int TraxelExtractor<N>::extract(
   // initialize the accumulator chain
   AccChainType acc_chain;
   acc_chain.ignoreLabel(0);
-  // always enable com and count
+  // always enable com, count and mean
   acc_chain.template activate<acc::RegionCenter>();
   acc_chain.template activate<acc::Count>();
+  acc_chain.template activate<acc::Mean>();
   // select the other features
   select_features(acc_chain);
   // initialize the coupled iterator
@@ -182,19 +184,38 @@ int TraxelExtractor<N>::extract_for_label(
   fill_feature_map(acc_chain, label_id, feature_map);
   // get the object size
   DataType size = acc::get<acc::Count>(acc_chain, label_id);
-  feature_map["count"].push_back(size);
   // filter size
   bool fits_lower_lim = ((lower_size_lim_ == 0) or (size >= lower_size_lim_));
   bool fits_upper_lim = ((upper_size_lim_ == 0) or (size <= upper_size_lim_));
   if (fits_upper_lim and fits_lower_lim) {
+    // get the count (for tracking and divion feature calculation)
+    feature_map["count"].push_back(size);
+    if (feature_map.count("Count") == 0) {
+      feature_map["Count"].push_back(size);
+    }
     // get the region center (maybe once again)
-    std::string name("com");
+    std::string com_name("com");
     set_feature(
       feature_map,
-      name,
+      com_name,
       acc::get<acc::RegionCenter>(acc_chain, label_id));
     if (feature_map["com"].size() == 2) {
       feature_map["com"].push_back(0.0);
+    }
+    if (feature_map.count("RegionCenter") == 0) {
+      std::string rc_name("RegionCenter");
+      set_feature(
+        feature_map,
+        rc_name,
+        acc::get<acc::RegionCenter>(acc_chain, label_id));
+    }
+    // get the mean
+    if (feature_map.count("Mean") == 0) {
+      std::string mean_name("Mean");
+      set_feature(
+        feature_map,
+        mean_name,
+        acc::get<acc::Mean>(acc_chain, label_id));
     }
     if (random_forests_.size() > 0) {
       get_detection_probability(feature_map);
