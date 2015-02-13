@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
   // arg 1: dataset folder
   try {
     // check for correct number of arguments
-    if (argc < 7) {
+    if (argc < 8) {
       throw isbi::ArgumentError();
     }
     // TODO what about presmoothing?
@@ -61,6 +61,7 @@ int main(int argc, char** argv) {
     std::string config_file_path(argv[4]);
     std::string classifier_file_path(argv[5]);
     std::string region_feature_file_path(argv[6]);
+    std::string division_feature_file_path(argv[7]);
 
     isbi::PathType raw_dir = fs::system_complete(raw_dir_str);
     isbi::PathType seg_dir = fs::system_complete(seg_dir_str);
@@ -100,6 +101,9 @@ int main(int argc, char** argv) {
     std::vector<std::string> region_feature_list;
     isbi::RandomForestVectorType region_feature_rfs;
     unsigned int max_object_num = 0;
+    std::vector<std::string> division_feature_list;
+    isbi::RandomForestVectorType division_feature_rfs;
+    size_t template_size = 0;
     if (!options.get_option<std::string>("tracker").compare("ConsTracking")) {
       // get the region features used in project
       bool read_status = isbi::read_region_features_from_file(
@@ -122,6 +126,27 @@ int main(int argc, char** argv) {
         throw std::runtime_error(
           "Set to ConsTracking but no ClassifierForest found");
       }
+      // get the division features used in project
+      read_status = isbi::read_region_features_from_file(
+        division_feature_file_path,
+        division_feature_list);
+      if (read_status == 1) {
+        throw std::runtime_error(
+          "Could not open file " + division_feature_file_path);
+      }
+      // get the rf
+      read_status = isbi::get_rfs_from_file(
+        division_feature_rfs,
+        classifier_file_path,
+        "DivisionDetection/ClassifierForests/Forest",
+        1,
+        4);
+      if (!read_status) {
+        throw std::runtime_error(
+          "Set to ConsTracking but no DivisionClassifierForest found");
+      }
+      // get the template size
+      template_size = options.get_option<int>("template_size");
     }
 
     //=========================================================================
@@ -163,7 +188,9 @@ int main(int argc, char** argv) {
 
     // create division feature extractor
     isbi::DivisionFeatureExtractor<2, isbi::LabelType> div_feature_extractor(
-      options.get_option<int>("template_size"));
+      division_feature_list,
+      division_feature_rfs,
+      template_size);
     // storage for all traxels of a frame
     isbi::TraxelVectorType traxels_per_frame[2];
     size_t current_frame = 0;
@@ -260,7 +287,7 @@ int main(int argc, char** argv) {
     std::cout << "Usage: ";
     std::cout << argv[0] << " <image folder> <segmentation folder>"
       << " <result_folder> <config file> <classifier file>"
-      << " <region feature file>" << std::endl;
+      << " <region feature file> <division feature file>" << std::endl;
     return 0;
   } catch (std::runtime_error& e) {
     std::cout << "Program crashed:\n";

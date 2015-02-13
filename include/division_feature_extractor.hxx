@@ -19,8 +19,13 @@
 // own
 #include "common.h"
 
-namespace isbi_pipeline 
+namespace isbi_pipeline
 {
+
+template<unsigned int N, typename T>
+void copy_vector(
+	const std::vector<T>& vector,
+	vigra::MultiArrayView<N, T>& multi_array_view);
 
 template<int N, class LabelType>
 class DivisionFeatureExtractor
@@ -29,33 +34,40 @@ public:
 	typedef std::pair<size_t , float> TraxelWithDistance;
 
 public:
-	DivisionFeatureExtractor(size_t template_size = 50);
+	DivisionFeatureExtractor(
+		const std::vector<std::string>& feature_selection,
+		const RandomForestVectorType& random_forests,
+		size_t template_size = 50);
 
-	void extract(std::vector<pgmlink::Traxel>& traxels_current_frame, 
+	void extract(std::vector<pgmlink::Traxel>& traxels_current_frame,
 				 std::vector<pgmlink::Traxel>& traxels_next_frame,
 				 vigra::MultiArrayView<N, LabelType> label_image_next_frame);
 
 private:
-	pgmlink::feature_array parent_children_ratio_operation(const pgmlink::feature_array& a, 
-														   const pgmlink::feature_array& b, 
+	pgmlink::feature_array parent_children_ratio_operation(const pgmlink::feature_array& a,
+														   const pgmlink::feature_array& b,
 														   const pgmlink::feature_array& c);
 
-	pgmlink::feature_array parent_children_angle_operation(const pgmlink::feature_array& a, 
-														   const pgmlink::feature_array& b, 
+	pgmlink::feature_array parent_children_angle_operation(const pgmlink::feature_array& a,
+														   const pgmlink::feature_array& b,
 														   const pgmlink::feature_array& c);
 
-	std::set<LabelType> find_unique_labels_in_roi(vigra::MultiArrayView<N, LabelType> roi, 
+	std::set<LabelType> find_unique_labels_in_roi(vigra::MultiArrayView<N, LabelType> roi,
 												 bool ignore_label_zero = true);
 
 	void compute_traxel_division_features(pgmlink::Traxel& t,
-										  std::vector<TraxelWithDistance>& nearest_neighbors,
-										  std::vector<pgmlink::Traxel>& traxels_next_frame);
+											std::vector<TraxelWithDistance>& nearest_neighbors,
+											std::vector<pgmlink::Traxel>& traxels_next_frame);
 
 	std::vector< TraxelWithDistance > find_nearest_neighbors(const pgmlink::feature_array& traxel_position,
 															 std::vector<pgmlink::Traxel>& traxels_next_frame,
 															 vigra::MultiArrayView<N, LabelType> label_image_next_frame);
 
+	void get_division_probability(pgmlink::Traxel& traxel);
+
 private:
+	const std::vector<std::string>& feature_selection_;
+	const RandomForestVectorType& random_forests_;
 	size_t template_size_;
 	std::shared_ptr<pgmlink::feature_extraction::FeatureCalculator> squared_distance_calculator_;
 	std::shared_ptr<pgmlink::feature_extraction::FeatureCalculator> children_ratio_calculator_;
@@ -68,24 +80,42 @@ std::ostream& operator<<(std::ostream& lhs, const pgmlink::feature_array& rhs);
 
 // ---------------------------------------------------------------------------------------------------------------
 
+template<unsigned int N, typename T>
+void copy_vector(
+	const std::vector<T>& vector,
+	vigra::MultiArrayView<N, T>& multi_array_view)
+{
+	typename std::vector<T>::const_iterator v_it = vector.begin();
+	typename vigra::MultiArrayView<N, T>::iterator m_it = multi_array_view.begin();
+	for (; v_it != vector.end(); v_it++, m_it++) {
+		*m_it = *v_it;
+	}
+}
+
+
 template<int N, class LabelType>
-DivisionFeatureExtractor<N, LabelType>::DivisionFeatureExtractor(size_t template_size):
+DivisionFeatureExtractor<N, LabelType>::DivisionFeatureExtractor(
+		const std::vector<std::string>& feature_selection,
+		const RandomForestVectorType& random_forests,
+		size_t template_size):
+	feature_selection_(feature_selection),
+	random_forests_(random_forests),
 	template_size_(template_size),
 	squared_distance_calculator_(new pgmlink::feature_extraction::SquareRootSquaredDifferenceCalculator()),
 	children_ratio_calculator_(new pgmlink::feature_extraction::RatioCalculator())
 {
 	parent_children_ratio_calculator_ = std::shared_ptr<pgmlink::feature_extraction::FeatureCalculator>(new pgmlink::feature_extraction::TripletOperationCalculator(
-		std::bind(&DivisionFeatureExtractor<N, LabelType>::parent_children_ratio_operation, 
-				  this, 
-				  std::placeholders::_1, 
-				  std::placeholders::_2, 
+		std::bind(&DivisionFeatureExtractor<N, LabelType>::parent_children_ratio_operation,
+				  this,
+				  std::placeholders::_1,
+				  std::placeholders::_2,
 				  std::placeholders::_3),
 		"ParentChildrenRatio"));
 	parent_children_angle_calculator_ = std::shared_ptr<pgmlink::feature_extraction::FeatureCalculator>(new pgmlink::feature_extraction::TripletOperationCalculator(
-		std::bind(&DivisionFeatureExtractor<N, LabelType>::parent_children_angle_operation, 
-				  this, 
-				  std::placeholders::_1, 
-				  std::placeholders::_2, 
+		std::bind(&DivisionFeatureExtractor<N, LabelType>::parent_children_angle_operation,
+				  this,
+				  std::placeholders::_1,
+				  std::placeholders::_2,
 				  std::placeholders::_3),
 		"ParentChildrenAngle"));
 }
@@ -93,8 +123,8 @@ DivisionFeatureExtractor<N, LabelType>::DivisionFeatureExtractor(size_t template
 
 // ---------------------------------------------------------------------------------------------------------------
 template<int N, class LabelType>
-pgmlink::feature_array DivisionFeatureExtractor<N, LabelType>::parent_children_angle_operation(const pgmlink::feature_array& a, 
-							const pgmlink::feature_array& b, 
+pgmlink::feature_array DivisionFeatureExtractor<N, LabelType>::parent_children_angle_operation(const pgmlink::feature_array& a,
+							const pgmlink::feature_array& b,
 							const pgmlink::feature_array& c)
 {
 	assert(a.size() == b.size() && a.size() == c.size() && a.size() >= N);
@@ -123,7 +153,7 @@ pgmlink::feature_array DivisionFeatureExtractor<N, LabelType>::parent_children_a
 
 // ---------------------------------------------------------------------------------------------------------------
 template<int N, class LabelType>
-std::set<LabelType> DivisionFeatureExtractor<N, LabelType>::find_unique_labels_in_roi(vigra::MultiArrayView<N, LabelType> roi, 
+std::set<LabelType> DivisionFeatureExtractor<N, LabelType>::find_unique_labels_in_roi(vigra::MultiArrayView<N, LabelType> roi,
 																		bool ignore_label_zero)
 {
 	typedef std::set<LabelType> SetType;
@@ -142,17 +172,17 @@ std::set<LabelType> DivisionFeatureExtractor<N, LabelType>::find_unique_labels_i
 
 // ---------------------------------------------------------------------------------------------------------------
 template<int N, class LabelType>
-void DivisionFeatureExtractor<N, LabelType>::extract(std::vector<pgmlink::Traxel>& traxels_current_frame, 
-									   std::vector<pgmlink::Traxel>& traxels_next_frame,
-									   vigra::MultiArrayView<N, LabelType> label_image_next_frame)
+void DivisionFeatureExtractor<N, LabelType>::extract(std::vector<pgmlink::Traxel>& traxels_current_frame,
+										 std::vector<pgmlink::Traxel>& traxels_next_frame,
+										 vigra::MultiArrayView<N, LabelType> label_image_next_frame)
 {
 	for(pgmlink::Traxel& t : traxels_current_frame)
 	{
 		std::cout << "Investigating " << t << " at com " << t.features["RegionCenter"] << std::endl;
-		std::vector<TraxelWithDistance> nearest_neighbors = find_nearest_neighbors(t.features["RegionCenter"], 
-																				   traxels_next_frame, 
+		std::vector<TraxelWithDistance> nearest_neighbors = find_nearest_neighbors(t.features["RegionCenter"],
+																				   traxels_next_frame,
 																				   label_image_next_frame);
-		
+
 		std::cout << "Distances after sorting:" << std::endl;
 		for(TraxelWithDistance& twd : nearest_neighbors)
 		{
@@ -167,7 +197,7 @@ void DivisionFeatureExtractor<N, LabelType>::extract(std::vector<pgmlink::Traxel
 
 // ---------------------------------------------------------------------------------------------------------------
 template<int N, class LabelType>
-std::vector< typename DivisionFeatureExtractor<N, LabelType>::TraxelWithDistance > 
+std::vector< typename DivisionFeatureExtractor<N, LabelType>::TraxelWithDistance >
 DivisionFeatureExtractor<N, LabelType>::find_nearest_neighbors(
 	const pgmlink::feature_array& traxel_position,
 	std::vector<pgmlink::Traxel>& traxels_next_frame,
@@ -181,7 +211,7 @@ DivisionFeatureExtractor<N, LabelType>::find_nearest_neighbors(
 		start[i] = std::max(0, int(traxel_position[i] - template_size_ / 2));
 		stop[i]  = std::min(int(label_image_next_frame.shape(0)), int(traxel_position[i] + template_size_ / 2));
 	}
-	
+
 	vigra::MultiArrayView<N, LabelType> roi = label_image_next_frame.subarray(start, stop);
 
 	// find all labels in this roi, and order them according to their distances
@@ -216,8 +246,8 @@ DivisionFeatureExtractor<N, LabelType>::find_nearest_neighbors(
 
 // ---------------------------------------------------------------------------------------------------------------
 template<int N, class LabelType>
-pgmlink::feature_array DivisionFeatureExtractor<N, LabelType>::parent_children_ratio_operation(const pgmlink::feature_array& a, 
-							const pgmlink::feature_array& b, 
+pgmlink::feature_array DivisionFeatureExtractor<N, LabelType>::parent_children_ratio_operation(const pgmlink::feature_array& a,
+							const pgmlink::feature_array& b,
 							const pgmlink::feature_array& c)
 {
 	assert(a.size() == b.size() && a.size() == c.size());
@@ -244,7 +274,7 @@ void DivisionFeatureExtractor<N, LabelType>::compute_traxel_division_features(pg
 	for(size_t i = 0; i < nearest_neighbors.size(); i++)
 	{
 		std::stringstream feat_name;
-		feat_name << "SquaredDistance_" << i;
+		feat_name << "SquaredDistances_" << i;
 		t.features[feat_name.str()] = { nearest_neighbors[i].second };
 	}
 
@@ -252,49 +282,87 @@ void DivisionFeatureExtractor<N, LabelType>::compute_traxel_division_features(pg
 	{
 		// compute remaining features:
 		t.features["ChildrenRatio_Count"] = children_ratio_calculator_->calculate(
-														traxels_next_frame[nearest_neighbors[0].first].features["Count"], 
+														traxels_next_frame[nearest_neighbors[0].first].features["Count"],
 														traxels_next_frame[nearest_neighbors[1].first].features["Count"]);
 		t.features["ChildrenRatio_Mean"] = children_ratio_calculator_->calculate(
-														traxels_next_frame[nearest_neighbors[0].first].features["Mean"], 
+														traxels_next_frame[nearest_neighbors[0].first].features["Mean"],
 														traxels_next_frame[nearest_neighbors[1].first].features["Mean"]);
+		t.features["ChildrenRatio_SquaredDistances"] = children_ratio_calculator_->calculate(
+														t.features["SquaredDistances_0"],
+														t.features["SquaredDistances_1"]);
 		t.features["ParentChildrenRatio_Mean"] = parent_children_ratio_calculator_->calculate(
 														t.features["Mean"],
-														traxels_next_frame[nearest_neighbors[0].first].features["Mean"], 
+														traxels_next_frame[nearest_neighbors[0].first].features["Mean"],
 														traxels_next_frame[nearest_neighbors[1].first].features["Mean"]);
 		t.features["ParentChildrenRatio_Count"] = parent_children_ratio_calculator_->calculate(
 														t.features["Count"],
-														traxels_next_frame[nearest_neighbors[0].first].features["Count"], 
+														traxels_next_frame[nearest_neighbors[0].first].features["Count"],
 														traxels_next_frame[nearest_neighbors[1].first].features["Count"]);
 		float angle = parent_children_angle_calculator_->calculate(
 														t.features["RegionCenter"],
-														traxels_next_frame[nearest_neighbors[0].first].features["RegionCenter"], 
+														traxels_next_frame[nearest_neighbors[0].first].features["RegionCenter"],
 														traxels_next_frame[nearest_neighbors[1].first].features["RegionCenter"])[0];
 		if(nearest_neighbors.size() > 2)
 		{
 			angle = std::max(angle, parent_children_angle_calculator_->calculate(
 														t.features["RegionCenter"],
-														traxels_next_frame[nearest_neighbors[1].first].features["RegionCenter"], 
+														traxels_next_frame[nearest_neighbors[1].first].features["RegionCenter"],
 														traxels_next_frame[nearest_neighbors[2].first].features["RegionCenter"])[0]);
 			angle = std::max(angle, parent_children_angle_calculator_->calculate(
 														t.features["RegionCenter"],
-														traxels_next_frame[nearest_neighbors[0].first].features["RegionCenter"], 
+														traxels_next_frame[nearest_neighbors[0].first].features["RegionCenter"],
 														traxels_next_frame[nearest_neighbors[2].first].features["RegionCenter"])[0]);
 		}
 		t.features["ParentChildrenAngle_RegionCenter"] = { angle };
+		get_division_probability(t);
 	}
 	else
 	{
 		t.features["ChildrenRatio_Count"] = {0.0f};
 		t.features["ChildrenRatio_Mean"] = {0.0f};
+		t.features["ChildrenRatio_SquaredDistances"] = {0.0f};
 		t.features["ParentChildrenRatio_Mean"] = {0.0f};
 		t.features["ParentChildrenRatio_Count"] = {0.0f};
 		t.features["ParentChildrenAngle_RegionCenter"] = {0.0f};
+		t.features["divProb"] = {0.0f};
 	}
 	std::cout << "\tChildrenRatio_Count" << t.features["ChildrenRatio_Count"] << std::endl;
 	std::cout << "\tChildrenRatio_Mean" << t.features["ChildrenRatio_Mean"] << std::endl;
 	std::cout << "\tParentChildrenRatio_Mean" << t.features["ParentChildrenRatio_Mean"] << std::endl;
 	std::cout << "\tParentChildrenRatio_Count" << t.features["ParentChildrenRatio_Count"] << std::endl;
 	std::cout << "\tParentChildrenAngle_RegionCenter" << t.features["ParentChildrenAngle_RegionCenter"] << std::endl;
+	std::cout << "\tdivProb" << t.features["divProb"] << std::endl;
+}
+
+template<int N, class LabelType>
+void DivisionFeatureExtractor<N, LabelType>::get_division_probability(
+	pgmlink::Traxel& traxel)
+{
+	// get the size of the feature vector
+	size_t feature_size = feature_selection_.size();
+	// get all features into one multi array
+	vigra::MultiArray<2, FeatureType> features(vigra::Shape2(1, feature_size));
+	for(size_t offset = 0; offset < feature_size; offset++) {
+		std::cout << "Fetch feature " << feature_selection_[offset] << std::endl;
+		const std::string& feature_name = feature_selection_[offset];
+		if (traxel.features.count(feature_name) == 0) {
+			throw std::runtime_error("Feature " + feature_name + " not found");
+			// TODO throw runtime error
+			features(0, offset) = 0.0f;
+		} else {
+			features(0, offset) = traxel.features[feature_name][0];
+		}
+	}
+	// evaluate the random forests
+	vigra::MultiArray<2, FeatureType> probabilities(vigra::Shape2(1, 2), 0.0);
+	for (size_t n = 0; n < random_forests_.size(); n++) {
+		vigra::MultiArray<2, FeatureType> probabilities_temp(vigra::Shape2(1, 2));
+		random_forests_[n].predictProbabilities(features, probabilities_temp);
+		probabilities += probabilities_temp;
+	}
+	// fill the features map
+	traxel.features["divProb"].clear();
+	traxel.features["divProb"].push_back(probabilities(0, 1));
 }
 
 } // namespace isbi_pipeline

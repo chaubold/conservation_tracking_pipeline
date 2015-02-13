@@ -149,6 +149,7 @@ int TraxelExtractor<N>::extract(
   acc_chain.template activate<acc::RegionCenter>();
   acc_chain.template activate<acc::Count>();
   acc_chain.template activate<acc::Mean>();
+  acc_chain.template activate<acc::Variance>();
   // select the other features
   select_features(acc_chain);
   // initialize the coupled iterator
@@ -216,6 +217,14 @@ int TraxelExtractor<N>::extract_for_label(
         feature_map,
         mean_name,
         acc::get<acc::Mean>(acc_chain, label_id));
+    }
+    // get the variance
+    if (feature_map.count("Variance") == 0) {
+      std::string var_name("Variance");
+      set_feature(
+        feature_map,
+        var_name,
+        acc::get<acc::Variance>(acc_chain, label_id));
     }
     if (random_forests_.size() > 0) {
       get_detection_probability(feature_map);
@@ -354,7 +363,7 @@ int TraxelExtractor<N>::get_detection_probability(
   // get the size of the feature vector
   size_t feature_size = 0;
   for(std::string feature : feature_selection_) {
-    pgmlink::FeatureMap::const_iterator f_it = feature_map.find(feature);
+    FeatureMapType::const_iterator f_it = feature_map.find(feature);
     if (f_it == feature_map.end()) {
       throw std::runtime_error("Feature \"" + feature + "\" not found");
     } else {
@@ -365,11 +374,11 @@ int TraxelExtractor<N>::get_detection_probability(
   size_t offset = 0;
   vigra::MultiArray<2, FeatureType> features(vigra::Shape2(1, feature_size));
   for(std::string feature : feature_selection_) {
-    pgmlink::FeatureMap::const_iterator f_it = feature_map.find(feature);
+    FeatureMapType::const_iterator f_it = feature_map.find(feature);
     size_t size = (f_it->second).size();
     vigra::MultiArrayView<2, FeatureType> features_view = features.subarray(
-      vigra::Shape2(offset, 0),
-      vigra::Shape2(offset+size, 1));
+      vigra::Shape2(0, offset),
+      vigra::Shape2(1, offset+size));
     copy_vector(f_it->second, features_view);
     offset += size;
   }
