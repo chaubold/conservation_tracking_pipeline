@@ -55,7 +55,7 @@ class TraxelExtractor {
     const Segmentation<N>& segmentation,
     const vigra::MultiArrayView<N, unsigned>& image,
     const int timestep,
-    pgmlink::TraxelStore& traxelstore) const;
+    std::vector<pgmlink::Traxel>& traxels) const;
  private:
   int select_features(
     AccChainType& acc_chain) const;
@@ -63,7 +63,7 @@ class TraxelExtractor {
     const AccChainType& acc_chain,
     const size_t label_id,
     const int timestep,
-    pgmlink::TraxelStore& traxelstore) const;
+    std::vector<pgmlink::Traxel>& traxels) const;
   int fill_feature_map(
     const AccChainType& acc_chain,
     const size_t label_id,

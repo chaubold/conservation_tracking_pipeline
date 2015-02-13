@@ -139,8 +139,9 @@ int TraxelExtractor<N>::extract(
   const Segmentation<N>& segmentation,
   const vigra::MultiArrayView<N, unsigned>& image,
   const int timestep,
-  pgmlink::TraxelStore& traxelstore) const
+  std::vector<pgmlink::Traxel>& traxels) const
 {
+  traxels.clear();
   LOG("Extract traxel");
   int return_status = 0;
   // initialize the accumulator chain
@@ -166,7 +167,7 @@ int TraxelExtractor<N>::extract(
       acc_chain,
       label_id,
       timestep,
-      traxelstore);
+      traxels);
   }
   return return_status;
 }
@@ -176,7 +177,7 @@ int TraxelExtractor<N>::extract_for_label(
   const AccChainType& acc_chain,
   const size_t label_id,
   const int timestep,
-  pgmlink::TraxelStore& traxelstore) const
+  std::vector<pgmlink::Traxel>& traxels) const
 {
   int return_status = 0;
   // get the feature map
@@ -203,7 +204,7 @@ int TraxelExtractor<N>::extract_for_label(
     }
     // create the traxel and add it to the traxel store
     pgmlink::Traxel traxel(label_id, timestep, feature_map);
-    pgmlink::add(traxelstore, traxel);
+    traxels.push_back(traxel);
   }
   return return_status;
 }

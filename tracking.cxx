@@ -29,6 +29,7 @@
 #include "segmentation.hxx"
 #include "traxel_extractor.hxx"
 #include "lineage.hxx"
+#include "division_feature_extractor.hxx"
 
 
 // Aliases for convenience
@@ -166,6 +167,12 @@ int main(int argc, char** argv) {
       options.get_option<int>("size_from"),
       options.get_option<int>("size_to"));
 
+    // create division feature extractor
+    isbi::DivisionFeatureExtractor<2, unsigned> dfe(options.get_option<int>("template_size"));
+    // storage for all traxels of a frame
+    std::vector<pgmlink::Traxel> traxels_per_frame[2];
+    size_t current_frame = 0;
+
     // iterate over the filenames TODO timestep counting not correct
     std::vector<fs::path>::iterator raw_it, seg_it;
     for (
@@ -173,6 +180,10 @@ int main(int argc, char** argv) {
       raw_it != raw_fn_vec.end();
       raw_it++, seg_it++, timestep++)
     {
+      // for easier readability, create references to traxels for last and current frame:
+      std::vector<pgmlink::Traxel>& traxels_current_frame = traxels_per_frame[current_frame];
+      std::vector<pgmlink::Traxel>& traxels_last_frame = traxels_per_frame[1 - current_frame];
+
       std::string raw_filename(raw_it->string());
       std::string seg_filename(seg_it->string());
       std::cout << "processing image " + raw_filename + " ...\n";
@@ -188,8 +199,25 @@ int main(int argc, char** argv) {
       segmentation.label_image_.minmax(&min, &max);
       segmentation.label_count_ = max;
       // create traxels and add them to the traxelstore
-      traxel_extractor.extract(segmentation, image, timestep, ts);
+      traxel_extractor.extract(segmentation, image, timestep, traxels_current_frame);
+
+      // extract division features if this was not the first frame
+      if(raw_it != raw_fn_vec.begin())
+      {
+        if(options.get_option<std::string>("tracker").compare("ConsTracking"))
+          dfe.extract(traxels_last_frame, traxels_current_frame, segmentation.label_image_);
+
+        // add all traxels of last frame to traxelstore
+        for(pgmlink::Traxel& t : traxels_last_frame)
+          pgmlink::add(ts, t);
+      }
+
+      current_frame = 1 - current_frame;
     }
+
+    // add remaining traxels (after switching in "last frame") to traxelstore
+    for(pgmlink::Traxel& t : traxels_per_frame[1 - current_frame])
+      pgmlink::add(ts, t);
 
     //=========================================================================
     // track!
