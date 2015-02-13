@@ -46,6 +46,7 @@ typedef std::vector<FeatureType> FeatureArrayType;
 typedef pgmlink::TraxelStore TraxelStoreType;
 typedef std::vector<pgmlink::Event> EventVectorType;
 typedef std::vector<EventVectorType> EventVectorVectorType;
+typedef std::vector<pgmlink::Traxel> TraxelVectorType;
 
 // Traxel index and index mapping types 
 typedef std::pair<int, unsigned> TraxelIndexType;

@@ -16,6 +16,9 @@
 #include <vigra/impex.hxx>
 #include <vigra/multi_array.hxx>
 
+// own
+#include "common.h"
+
 namespace isbi_pipeline 
 {
 
