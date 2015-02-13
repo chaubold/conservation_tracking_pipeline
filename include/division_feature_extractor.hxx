@@ -313,6 +313,10 @@ void DivisionFeatureExtractor<N, LabelType>::compute_traxel_division_features(pg
 														traxels_next_frame[nearest_neighbors[0].first].features["RegionCenter"],
 														traxels_next_frame[nearest_neighbors[2].first].features["RegionCenter"])[0]);
 		}
+		else
+		{
+			t.features["SquaredDistances_2"] = {0.0f};
+		}
 		t.features["ParentChildrenAngle_RegionCenter"] = { angle };
 		get_division_probability(t);
 	}

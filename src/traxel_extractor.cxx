@@ -384,11 +384,11 @@ int TraxelExtractor<N>::get_detection_probability(
   }
   // evaluate the random forests
   vigra::MultiArray<2, FeatureType> probabilities(
-    vigra::Shape2(1, max_object_num_),
+    vigra::Shape2(1, max_object_num_ + 1),
     0.0);
   for (size_t n = 0; n < random_forests_.size(); n++) {
     vigra::MultiArray<2, FeatureType> probabilities_temp(
-      vigra::Shape2(1, max_object_num_));
+      vigra::Shape2(1, max_object_num_ + 1));
     random_forests_[n].predictProbabilities(features, probabilities_temp);
     probabilities += probabilities_temp;
   }
