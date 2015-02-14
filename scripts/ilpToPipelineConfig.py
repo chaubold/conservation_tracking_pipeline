@@ -67,6 +67,8 @@ if __name__ == "__main__":
 		with open(args.out_path + '/tracking_config.txt', 'w') as out_f:
 			params = in_f['ConservationTracking/Parameters/0']
 			out_f.write('epGap,0.05\n')
+			out_f.write('templateSize,50\n')
+			out_f.write('transitionParam,5\n')
 			if params['z_range'][1] - params['z_range'][0] == 1:
 				out_f.write('nDim,2\n')
 			else:
