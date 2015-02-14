@@ -1,0 +1,6 @@
+Debian Jessie - install instructions:
+
+Needed packages:
+	libboost1.55-all-dev
+	libopenblas-dev
+	libhdf5-dev
