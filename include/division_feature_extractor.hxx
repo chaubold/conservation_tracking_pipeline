@@ -270,7 +270,11 @@ void DivisionFeatureExtractor<N, LabelType>::compute_traxel_division_features(pg
 	std::vector<TraxelWithDistance>& nearest_neighbors,
 	std::vector<pgmlink::Traxel>& traxels_next_frame)
 {
-	// store squared distances in traxels
+	// initialize squared distances in traxels
+	t.features["SquaredDistances_0"] = {9999.f};
+	t.features["SquaredDistances_1"] = {9999.f};
+	t.features["SquaredDistances_2"] = {9999.f};
+	// overwrite squared distances if available
 	for(size_t i = 0; i < nearest_neighbors.size(); i++)
 	{
 		std::stringstream feat_name;
@@ -313,12 +317,7 @@ void DivisionFeatureExtractor<N, LabelType>::compute_traxel_division_features(pg
 														traxels_next_frame[nearest_neighbors[0].first].features["RegionCenter"],
 														traxels_next_frame[nearest_neighbors[2].first].features["RegionCenter"])[0]);
 		}
-		else
-		{
-			t.features["SquaredDistances_2"] = {0.0f};
-		}
 		t.features["ParentChildrenAngle_RegionCenter"] = { angle };
-		get_division_probability(t);
 	}
 	else
 	{
@@ -328,14 +327,13 @@ void DivisionFeatureExtractor<N, LabelType>::compute_traxel_division_features(pg
 		t.features["ParentChildrenRatio_Mean"] = {0.0f};
 		t.features["ParentChildrenRatio_Count"] = {0.0f};
 		t.features["ParentChildrenAngle_RegionCenter"] = {0.0f};
-		t.features["divProb"] = {0.0f};
 	}
-	std::cout << "\tChildrenRatio_Count" << t.features["ChildrenRatio_Count"] << std::endl;
-	std::cout << "\tChildrenRatio_Mean" << t.features["ChildrenRatio_Mean"] << std::endl;
-	std::cout << "\tParentChildrenRatio_Mean" << t.features["ParentChildrenRatio_Mean"] << std::endl;
-	std::cout << "\tParentChildrenRatio_Count" << t.features["ParentChildrenRatio_Count"] << std::endl;
-	std::cout << "\tParentChildrenAngle_RegionCenter" << t.features["ParentChildrenAngle_RegionCenter"] << std::endl;
-	std::cout << "\tdivProb" << t.features["divProb"] << std::endl;
+	get_division_probability(t);
+	// std::cout << "\tChildrenRatio_Count" << t.features["ChildrenRatio_Count"] << std::endl;
+	// std::cout << "\tChildrenRatio_Mean" << t.features["ChildrenRatio_Mean"] << std::endl;
+	// std::cout << "\tParentChildrenRatio_Mean" << t.features["ParentChildrenRatio_Mean"] << std::endl;
+	// std::cout << "\tParentChildrenRatio_Count" << t.features["ParentChildrenRatio_Count"] << std::endl;
+	// std::cout << "\tParentChildrenAngle_RegionCenter" << t.features["ParentChildrenAngle_RegionCenter"] << std::endl;
 }
 
 template<int N, class LabelType>
@@ -347,7 +345,6 @@ void DivisionFeatureExtractor<N, LabelType>::get_division_probability(
 	// get all features into one multi array
 	vigra::MultiArray<2, FeatureType> features(vigra::Shape2(1, feature_size));
 	for(size_t offset = 0; offset < feature_size; offset++) {
-		std::cout << "Fetch feature " << feature_selection_[offset] << std::endl;
 		const std::string& feature_name = feature_selection_[offset];
 		if (traxel.features.count(feature_name) == 0) {
 			throw std::runtime_error("Feature " + feature_name + " not found");
@@ -367,6 +364,7 @@ void DivisionFeatureExtractor<N, LabelType>::get_division_probability(
 	// fill the features map
 	traxel.features["divProb"].clear();
 	traxel.features["divProb"].push_back(probabilities(0, 1));
+	std::cout << traxel << " has divProb: " << traxel.features["divProb"] << std::endl;
 }
 
 } // namespace isbi_pipeline

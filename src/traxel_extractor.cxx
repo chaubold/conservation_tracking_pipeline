@@ -230,6 +230,9 @@ int TraxelExtractor<N>::extract_for_label(
     }
     // create the traxel and add it to the traxel store
     pgmlink::Traxel traxel(label_id, timestep, feature_map);
+    std::cout << "Detection probabilitiy for " << traxel << ": ";
+    dump(feature_map["detProb"]);
+    std::cout << std::endl;
     traxels.push_back(traxel);
   }
   return return_status;
