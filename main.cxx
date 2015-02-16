@@ -111,6 +111,8 @@ int main(int argc, char** argv) {
       throw std::runtime_error("Bad options for tracking");
     }
 
+    // get the tracker name
+    const std::string& tracker_name = options.get_option<std::string>("tracker");
     // check if we have conservation tracking - get the random forests and
     // region features if applicable
     std::vector<std::string> region_feature_list;
@@ -119,7 +121,7 @@ int main(int argc, char** argv) {
     std::vector<std::string> division_feature_list;
     isbi::RandomForestVectorType division_feature_rfs;
     size_t template_size = 0;
-    if (!options.get_option<std::string>("tracker").compare("ConsTracking")) {
+    if (!tracker_name.compare("ConsTracking")) {
       // get the region features used in project
       read_status = isbi::read_region_features_from_file(
         region_feature_file_path,
@@ -163,6 +165,9 @@ int main(int argc, char** argv) {
       // get the template size
       template_size = options.get_option<int>("template_size");
     }
+    // get an empty coordinate map
+    isbi::CoordinateMapPtrType coordinate_map_ptr(
+      new isbi::CoordinateMapType);
 
     //=========================================================================
     // Segmentation
@@ -250,10 +255,16 @@ int main(int argc, char** argv) {
         image,
         timestep,
         traxels_current_frame);
-
+      // get the coordinate map
+      if (!tracker_name.compare("ConsTracking")) {
+        isbi::fill_coordinate_map(
+          traxels_current_frame,
+          segmentation.label_image_,
+          coordinate_map_ptr);
+      }
       // extract division features if this was not the first frame
       if(dir_itr != fn_vec.begin()) {
-        if(!options.get_option<std::string>("tracker").compare("ConsTracking")) {
+        if(!tracker_name.compare("ConsTracking")) {
           div_feature_extractor.extract(
             traxels_last_frame,
             traxels_current_frame,
@@ -276,7 +287,10 @@ int main(int argc, char** argv) {
     //=========================================================================
     // track!
     //=========================================================================
-    isbi::EventVectorVectorType events = isbi::track(ts, options);
+    isbi::EventVectorVectorType events = isbi::track(
+      ts,
+      options,
+      coordinate_map_ptr);
 
     //=========================================================================
     // handle results

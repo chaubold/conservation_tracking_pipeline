@@ -6,13 +6,6 @@
 #include "traxel_extractor.hxx"
 #include <iostream>
 
-#ifdef NDEBUG
-  #define LOG(message)
-#else
-  #include <iostream>
-  #define LOG(message) std::cout << message << std::endl
-#endif
-
 namespace isbi_pipeline {
 
 template<typename T>
@@ -140,16 +133,17 @@ int TraxelExtractor<N>::extract(
   TraxelVectorType& traxels) const
 {
   traxels.clear();
-  LOG("Extract traxel");
   int return_status = 0;
   // initialize the accumulator chain
   AccChainType acc_chain;
   acc_chain.ignoreLabel(0);
-  // always enable com, count and mean
+  // always enable com, count, mean and bounding box
   acc_chain.template activate<acc::RegionCenter>();
   acc_chain.template activate<acc::Count>();
   acc_chain.template activate<acc::Mean>();
   acc_chain.template activate<acc::Variance>();
+  acc_chain.template activate<acc::Coord<acc::Minimum> >();
+  acc_chain.template activate<acc::Coord<acc::Maximum> >();
   // select the other features
   select_features(acc_chain);
   // initialize the coupled iterator
@@ -195,35 +189,40 @@ int TraxelExtractor<N>::extract_for_label(
       feature_map["Count"].push_back(size);
     }
     // get the region center (maybe once again)
-    std::string com_name("com");
     set_feature(
       feature_map,
-      com_name,
+      "com",
       acc::get<acc::RegionCenter>(acc_chain, label_id));
+    if (feature_map.count("RegionCenter") == 0) {
+      set_feature(
+        feature_map,
+        "RegionCenter",
+        acc::get<acc::RegionCenter>(acc_chain, label_id));
+    }
+    // get the bounding box
+    set_feature(
+      feature_map,
+      "CoordMin",
+      acc::get<acc::Coord<acc::Minimum> >(acc_chain, label_id));
+    set_feature(
+      feature_map,
+      "CoordMax",
+      acc::get<acc::Coord<acc::Maximum> >(acc_chain, label_id));
     if (feature_map["com"].size() == 2) {
       feature_map["com"].push_back(0.0);
     }
-    if (feature_map.count("RegionCenter") == 0) {
-      std::string rc_name("RegionCenter");
-      set_feature(
-        feature_map,
-        rc_name,
-        acc::get<acc::RegionCenter>(acc_chain, label_id));
-    }
     // get the mean
     if (feature_map.count("Mean") == 0) {
-      std::string mean_name("Mean");
       set_feature(
         feature_map,
-        mean_name,
+        "Mean",
         acc::get<acc::Mean>(acc_chain, label_id));
     }
     // get the variance
     if (feature_map.count("Variance") == 0) {
-      std::string var_name("Variance");
       set_feature(
         feature_map,
-        var_name,
+        "Variance",
         acc::get<acc::Variance>(acc_chain, label_id));
     }
     if (random_forests_.size() > 0) {

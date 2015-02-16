@@ -82,7 +82,10 @@ bool get_rfs_from_file(
 
 
 // do the tracking
-EventVectorVectorType track(TraxelStoreType& ts, const TrackingOptions& options);
+EventVectorVectorType track(
+  TraxelStoreType& ts,
+  const TrackingOptions& options,
+  const CoordinateMapPtrType& coordinate_map_ptr = CoordinateMapPtrType());
 
 
 // helper function to iterate over tif only

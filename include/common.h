@@ -16,6 +16,7 @@
 // pgmlink
 #include <pgmlink/traxels.h>
 #include <pgmlink/event.h>
+#include <pgmlink/merger_resolving.h>
 
 namespace isbi_pipeline {
 
@@ -47,6 +48,8 @@ typedef pgmlink::TraxelStore TraxelStoreType;
 typedef std::vector<pgmlink::Event> EventVectorType;
 typedef std::vector<EventVectorType> EventVectorVectorType;
 typedef std::vector<pgmlink::Traxel> TraxelVectorType;
+typedef pgmlink::TimestepIdCoordinateMap CoordinateMapType;
+typedef pgmlink::TimestepIdCoordinateMapPtr CoordinateMapPtrType;
 
 // Traxel index and index mapping types 
 typedef std::pair<int, unsigned> TraxelIndexType;

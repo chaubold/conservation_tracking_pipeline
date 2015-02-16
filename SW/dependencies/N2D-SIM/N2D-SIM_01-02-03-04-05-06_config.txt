@@ -14,3 +14,4 @@ withDivisions,1
 cplex_timeout,1e+75
 border,0
 size_from,6
+size_to,0

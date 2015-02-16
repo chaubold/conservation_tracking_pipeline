@@ -247,7 +247,8 @@ bool get_rfs_from_file(
 // up with a cool idea?
 EventVectorVectorType track(
   TraxelStoreType& ts,
-  const TrackingOptions& options)
+  const TrackingOptions& options,
+  const CoordinateMapPtrType& coordinate_map_ptr)
 {
   const std::string& tracker_type = options.get_option<std::string>("tracker");
   // create the ChaingraphTracking or ConsTracking class and call the ()-
@@ -297,21 +298,30 @@ EventVectorVectorType track(
     // build the hypotheses graph
     tracker.build_hypo_graph(ts);
     // track
-    EventVectorVectorType ret = tracker.track(
-      options.get_option<double>("forbiddenCost"),
+    boost::shared_ptr<EventVectorVectorType> ret_ptr(
+      new EventVectorVectorType(tracker.track(
+        options.get_option<double>("forbiddenCost"),
+        options.get_option<double>("epGap"),
+        options.get_option<bool  >("withTracklets"),
+        options.get_option<double>("divWeight"),
+        options.get_option<double>("transWeight"),
+        options.get_option<double>("disappearanceCost"),
+        options.get_option<double>("appearanceCost"),
+        options.get_option<int   >("nDim"),
+        options.get_option<double>("transParameter"),
+        options.get_option<double>("borderAwareWidth"),
+        options.get_option<bool  >("withConstraints"),
+        options.get_option<double>("cplexTimeout"))));
+    // merger resolving
+    return tracker.resolve_mergers(
+      ret_ptr,
+      coordinate_map_ptr,
       options.get_option<double>("epGap"),
-      options.get_option<bool  >("withTracklets"),
-      options.get_option<double>("divWeight"),
       options.get_option<double>("transWeight"),
-      options.get_option<double>("disappearanceCost"),
-      options.get_option<double>("appearanceCost"),
+      options.get_option<bool  >("withTracklets"),
       options.get_option<int   >("nDim"),
       options.get_option<double>("transParameter"),
-      options.get_option<double>("borderAwareWidth"),
-      options.get_option<bool  >("withConstraints"),
-      options.get_option<double>("cplexTimeout"));
-    // TODO handle merger resolving
-    return ret;
+      options.get_option<bool  >("withConstraints"));
   } else {
     // throw an error
     throw std::runtime_error("Unknown tracker \"" + tracker_type + "\"");
