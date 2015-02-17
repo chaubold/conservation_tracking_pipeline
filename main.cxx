@@ -273,6 +273,7 @@ int main(int argc, char** argv) {
         }
         // add all traxels of last frame to traxelstore
         for(pgmlink::Traxel& t : traxels_last_frame) {
+          t.features["divProb"] = {0.0f};
           pgmlink::add(ts, t);
         }
       }
