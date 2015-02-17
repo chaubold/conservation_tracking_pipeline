@@ -34,14 +34,15 @@ public:
 	typedef std::pair<size_t , float> TraxelWithDistance;
 
 public:
-	DivisionFeatureExtractor(
-		const std::vector<std::string>& feature_selection,
-		const RandomForestVectorType& random_forests,
-		size_t template_size = 50);
+	DivisionFeatureExtractor(size_t template_size = 50);
 
 	void extract(std::vector<pgmlink::Traxel>& traxels_current_frame,
 				 std::vector<pgmlink::Traxel>& traxels_next_frame,
 				 vigra::MultiArrayView<N, LabelType> label_image_next_frame);
+
+	void compute_div_prob(std::vector<pgmlink::Traxel>& traxels_current_frame,
+						const std::vector<std::string>& feature_selection,
+						const RandomForestVectorType& random_forests);
 
 private:
 	pgmlink::feature_array parent_children_ratio_operation(const pgmlink::feature_array& a,
@@ -63,11 +64,11 @@ private:
 															 std::vector<pgmlink::Traxel>& traxels_next_frame,
 															 vigra::MultiArrayView<N, LabelType> label_image_next_frame);
 
-	void get_division_probability(pgmlink::Traxel& traxel);
+	void get_division_probability(const std::vector<std::string>& feature_selection,
+								const RandomForestVectorType& random_forests,
+								pgmlink::Traxel& traxel);
 
 private:
-	const std::vector<std::string>& feature_selection_;
-	const RandomForestVectorType& random_forests_;
 	size_t template_size_;
 	std::shared_ptr<pgmlink::feature_extraction::FeatureCalculator> squared_distance_calculator_;
 	std::shared_ptr<pgmlink::feature_extraction::FeatureCalculator> children_ratio_calculator_;
@@ -92,14 +93,9 @@ void copy_vector(
 	}
 }
 
-
+// ---------------------------------------------------------------------------------------------------------------
 template<int N, class LabelType>
-DivisionFeatureExtractor<N, LabelType>::DivisionFeatureExtractor(
-		const std::vector<std::string>& feature_selection,
-		const RandomForestVectorType& random_forests,
-		size_t template_size):
-	feature_selection_(feature_selection),
-	random_forests_(random_forests),
+DivisionFeatureExtractor<N, LabelType>::DivisionFeatureExtractor(size_t template_size):
 	template_size_(template_size),
 	squared_distance_calculator_(new pgmlink::feature_extraction::SquareRootSquaredDifferenceCalculator()),
 	children_ratio_calculator_(new pgmlink::feature_extraction::RatioCalculator())
@@ -328,7 +324,8 @@ void DivisionFeatureExtractor<N, LabelType>::compute_traxel_division_features(pg
 		t.features["ParentChildrenRatio_Count"] = {0.0f};
 		t.features["ParentChildrenAngle_RegionCenter"] = {0.0f};
 	}
-	get_division_probability(t);
+	// get_division_probability(t);
+
 	// std::cout << "\tChildrenRatio_Count" << t.features["ChildrenRatio_Count"] << std::endl;
 	// std::cout << "\tChildrenRatio_Mean" << t.features["ChildrenRatio_Mean"] << std::endl;
 	// std::cout << "\tParentChildrenRatio_Mean" << t.features["ParentChildrenRatio_Mean"] << std::endl;
@@ -337,18 +334,31 @@ void DivisionFeatureExtractor<N, LabelType>::compute_traxel_division_features(pg
 }
 
 template<int N, class LabelType>
+void DivisionFeatureExtractor<N, LabelType>::compute_div_prob(
+	std::vector<pgmlink::Traxel>& traxels_current_frame,
+	const std::vector<std::string>& feature_selection,
+	const RandomForestVectorType& random_forests)
+{
+	for(pgmlink::Traxel& t : traxels_current_frame)
+	{
+		get_division_probability(feature_selection, random_forests, t);
+	}
+}
+
+template<int N, class LabelType>
 void DivisionFeatureExtractor<N, LabelType>::get_division_probability(
+	const std::vector<std::string>& feature_selection,
+	const RandomForestVectorType& random_forests,
 	pgmlink::Traxel& traxel)
 {
 	// get the size of the feature vector
-	size_t feature_size = feature_selection_.size();
+	size_t feature_size = feature_selection.size();
 	// get all features into one multi array
 	vigra::MultiArray<2, FeatureType> features(vigra::Shape2(1, feature_size));
 	for(size_t offset = 0; offset < feature_size; offset++) {
-		const std::string& feature_name = feature_selection_[offset];
+		const std::string& feature_name = feature_selection[offset];
 		if (traxel.features.count(feature_name) == 0) {
 			throw std::runtime_error("Feature " + feature_name + " not found");
-			// TODO throw runtime error
 			features(0, offset) = 0.0f;
 		} else {
 			features(0, offset) = traxel.features[feature_name][0];
@@ -356,9 +366,9 @@ void DivisionFeatureExtractor<N, LabelType>::get_division_probability(
 	}
 	// evaluate the random forests
 	vigra::MultiArray<2, FeatureType> probabilities(vigra::Shape2(1, 2), 0.0);
-	for (size_t n = 0; n < random_forests_.size(); n++) {
+	for (size_t n = 0; n < random_forests.size(); n++) {
 		vigra::MultiArray<2, FeatureType> probabilities_temp(vigra::Shape2(1, 2));
-		random_forests_[n].predictProbabilities(features, probabilities_temp);
+		random_forests[n].predictProbabilities(features, probabilities_temp);
 		probabilities += probabilities_temp;
 	}
 	// fill the features map

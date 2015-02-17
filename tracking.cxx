@@ -192,10 +192,7 @@ int main(int argc, char** argv) {
       options.get_option<int>("size_to"));
 
     // create division feature extractor
-    isbi::DivisionFeatureExtractor<2, isbi::LabelType> div_feature_extractor(
-      division_feature_list,
-      division_feature_rfs,
-      template_size);
+    isbi::DivisionFeatureExtractor<2, isbi::LabelType> div_feature_extractor(template_size);
     // storage for all traxels of a frame
     isbi::TraxelVectorType traxels_per_frame[2];
     size_t current_frame = 0;
@@ -246,6 +243,10 @@ int main(int argc, char** argv) {
             traxels_last_frame,
             traxels_current_frame,
             segmentation.label_image_);
+          div_feature_extractor.compute_div_prob(
+            traxels_last_frame,
+            division_feature_list,
+            division_feature_rfs);
         }
         // add all traxels of last frame to traxelstore
         for(pgmlink::Traxel& t : traxels_last_frame) {
