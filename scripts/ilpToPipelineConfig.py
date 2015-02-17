@@ -7,6 +7,10 @@ def writeSelectedRegionFeatures(out_f, h5_group):
 	for feature_group_name in h5_group.keys():
 		feature_group = h5_group[feature_group_name]
 		for feature in feature_group.keys():
+			# discard squared distances feature
+			if feature == 'ChildrenRatio_SquaredDistances':
+				continue
+
 			if feature == 'Coord<Principal<Kurtosis>>':
 				feature = 'Coord<Principal<Kurtosis> >'
 			elif feature == 'Coord<Principal<Skewness>>':

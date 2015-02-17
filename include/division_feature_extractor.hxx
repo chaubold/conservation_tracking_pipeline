@@ -287,9 +287,9 @@ void DivisionFeatureExtractor<N, LabelType>::compute_traxel_division_features(pg
 		t.features["ChildrenRatio_Mean"] = children_ratio_calculator_->calculate(
 														traxels_next_frame[nearest_neighbors[0].first].features["Mean"],
 														traxels_next_frame[nearest_neighbors[1].first].features["Mean"]);
-		t.features["ChildrenRatio_SquaredDistances"] = children_ratio_calculator_->calculate(
-														t.features["SquaredDistances_0"],
-														t.features["SquaredDistances_1"]);
+		// t.features["ChildrenRatio_SquaredDistances"] = children_ratio_calculator_->calculate(
+		// 												t.features["SquaredDistances_0"],
+		// 												t.features["SquaredDistances_1"]);
 		t.features["ParentChildrenRatio_Mean"] = parent_children_ratio_calculator_->calculate(
 														t.features["Mean"],
 														traxels_next_frame[nearest_neighbors[0].first].features["Mean"],
@@ -319,15 +319,15 @@ void DivisionFeatureExtractor<N, LabelType>::compute_traxel_division_features(pg
 	{
 		t.features["ChildrenRatio_Count"] = {0.0f};
 		t.features["ChildrenRatio_Mean"] = {0.0f};
-		t.features["ChildrenRatio_SquaredDistances"] = {0.0f};
+		// t.features["ChildrenRatio_SquaredDistances"] = {0.0f};
 		t.features["ParentChildrenRatio_Mean"] = {0.0f};
 		t.features["ParentChildrenRatio_Count"] = {0.0f};
 		t.features["ParentChildrenAngle_RegionCenter"] = {0.0f};
 	}
-	// get_division_probability(t);
 
 	// std::cout << "\tChildrenRatio_Count" << t.features["ChildrenRatio_Count"] << std::endl;
 	// std::cout << "\tChildrenRatio_Mean" << t.features["ChildrenRatio_Mean"] << std::endl;
+	// // std::cout << "\tChildrenRatio_SquaredDistances" << t.features["ChildrenRatio_SquaredDistances"] << std::endl;
 	// std::cout << "\tParentChildrenRatio_Mean" << t.features["ParentChildrenRatio_Mean"] << std::endl;
 	// std::cout << "\tParentChildrenRatio_Count" << t.features["ParentChildrenRatio_Count"] << std::endl;
 	// std::cout << "\tParentChildrenAngle_RegionCenter" << t.features["ParentChildrenAngle_RegionCenter"] << std::endl;
@@ -371,6 +371,9 @@ void DivisionFeatureExtractor<N, LabelType>::get_division_probability(
 		random_forests[n].predictProbabilities(features, probabilities_temp);
 		probabilities += probabilities_temp;
 	}
+
+	std::cout << "RF feature set is: " << features << std::endl;
+
 	// fill the features map
 	traxel.features["divProb"].clear();
 	traxel.features["divProb"].push_back(probabilities(0, 1));
