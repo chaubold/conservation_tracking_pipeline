@@ -70,8 +70,11 @@ if __name__ == "__main__":
 
 		with open(args.out_path + '/tracking_config.txt', 'w') as out_f:
 			params = in_f['ConservationTracking/Parameters/0']
+			out_f.write('tracker,ConsTracking\n')
+			out_f.write('borderWidth,0\n')
+			out_f.write('forbiddenCost,0\n')
 			out_f.write('epGap,0.05\n')
-			out_f.write('template_size,50\n')
+			out_f.write('templateSize,50\n')
 			out_f.write('transParameter,5\n')
 			out_f.write('withConstraints,1\n')
 			if params['z_range'][1] - params['z_range'][0] == 1:
@@ -95,4 +98,7 @@ if __name__ == "__main__":
 						else:
 							out_f.write('{},0\n'.format(key))
 					else:
-						out_f.write('{},{}\n'.format(key, params[key].value))
+						if key == 'cplex_timeout' and params[key].value == '':
+							out_f.write('{},{}\n'.format(key, 1e+75))
+						else:
+							out_f.write('{},{}\n'.format(key, params[key].value))
