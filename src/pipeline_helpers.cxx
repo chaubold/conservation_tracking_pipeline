@@ -110,9 +110,10 @@ std::string TrackingOptions::get_option<std::string>(
 
 bool TrackingOptions::is_legal() const {
   bool ret = check_option<std::string>("tracker");
-  ret = ret and check_option<int>("border");
-  ret = ret and check_option<int>("size_from");
-  ret = ret and check_option<int>("size_to");
+  ret = ret and check_option<int>("borderWidth");
+  ret = ret and check_option<int>("size_range_0");
+  ret = ret and check_option<int>("size_range_1");
+  ret = ret and check_option<int>("templateSize");
   if (ret) {
     const std::string tracker_type = get_option<std::string>("tracker");
     // check the tracker options
@@ -155,7 +156,7 @@ bool TrackingOptions::is_legal() const {
       ret = ret and check_option<double>("disappearanceCost");
       ret = ret and check_option<double>("appearanceCost");
       ret = ret and check_option<int   >("nDim");
-      ret = ret and check_option<double>("transParameter");
+      ret = ret and check_option<double>("transitionParam");
       ret = ret and check_option<double>("borderAwareWidth");
       ret = ret and check_option<bool  >("withConstraints");
       ret = ret and check_option<double>("cplex_timeout");
@@ -308,7 +309,7 @@ EventVectorVectorType track(
         options.get_option<double>("disappearanceCost"),
         options.get_option<double>("appearanceCost"),
         options.get_option<int   >("nDim"),
-        options.get_option<double>("transParameter"),
+        options.get_option<double>("transitionParam"),
         options.get_option<double>("borderAwareWidth"),
         options.get_option<bool  >("withConstraints"),
         options.get_option<double>("cplex_timeout"))));
@@ -320,7 +321,7 @@ EventVectorVectorType track(
       options.get_option<double>("transWeight"),
       options.get_option<bool  >("withTracklets"),
       options.get_option<int   >("nDim"),
-      options.get_option<double>("transParameter"),
+      options.get_option<double>("transitionParam"),
       options.get_option<bool  >("withConstraints"));
   } else {
     // throw an error

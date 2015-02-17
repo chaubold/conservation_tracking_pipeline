@@ -15,7 +15,6 @@ Lineage::Lineage(const EventVectorVectorType& events) {
       event_it != events[timestep].end();
       event_it++ )
     {
-      std::cout << *event_it << std::endl;
       handle_event(*event_it, timestep);
     }
   }

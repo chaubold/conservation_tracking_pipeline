@@ -1,9 +1,9 @@
 Always required
 ===============
 tracker
-border
-size_from
-size_to
+borderWidth
+size_range_0
+size_range_1
 
 Required for tracker="ChaingraphTracking"
 =========================================
@@ -49,6 +49,7 @@ transParameter
 borderAwareWidth
 withConstraints
 cplex_timeout
+templateSize
 
 Format
 ======

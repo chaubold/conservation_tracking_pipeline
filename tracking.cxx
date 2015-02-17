@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
           "Set to ConsTracking but no DivisionClassifierForest found");
       }
       // get the template size
-      template_size = options.get_option<int>("template_size");
+      template_size = options.get_option<int>("templateSize");
     }
     // get an empty coordinate map
     isbi::CoordinateMapPtrType coordinate_map_ptr(
@@ -187,9 +187,9 @@ int main(int argc, char** argv) {
       max_object_num,
       region_feature_list,
       region_feature_rfs,
-      options.get_option<int>("border"),
-      options.get_option<int>("size_from"),
-      options.get_option<int>("size_to"));
+      options.get_option<int>("borderWidth"),
+      options.get_option<int>("size_range_0"),
+      options.get_option<int>("size_range_1"));
 
     // create division feature extractor
     isbi::DivisionFeatureExtractor<2, isbi::LabelType> div_feature_extractor(template_size);
