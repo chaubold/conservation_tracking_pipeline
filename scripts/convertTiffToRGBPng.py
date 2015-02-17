@@ -9,7 +9,7 @@ if __name__ == "__main__":
     # get the arguments
     arguments = sys.argv
     if len(arguments) < 3:
-        print "usage: {} <input_folder> <output_folder>".format(sys.argv[0])
+        print "usage: {} <input_folder> <output_folder> [<max id>]".format(sys.argv[0])
         sys.exit(-1)
     if len(arguments) == 3:
         normalize = False
