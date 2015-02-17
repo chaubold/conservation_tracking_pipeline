@@ -10,11 +10,13 @@ namespace isbi_pipeline {
 Lineage::Lineage(const EventVectorVectorType& events) {
   track_count_ = 0;
   for (int timestep = 0; timestep < int(events.size()); timestep++) {
+    std::cout << "Timestep " << timestep << std::endl;
     for (
       EventVectorType::const_iterator event_it = events[timestep].begin();
       event_it != events[timestep].end();
       event_it++ )
     {
+      std::cout << "\t" << *event_it << std::endl;
       handle_event(*event_it, timestep);
     }
   }
