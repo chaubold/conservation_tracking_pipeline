@@ -48,7 +48,7 @@ nDim
 transParameter
 borderAwareWidth
 withConstraints
-cplexTimeout
+cplex_timeout
 
 Format
 ======

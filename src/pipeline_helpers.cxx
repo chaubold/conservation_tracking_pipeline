@@ -158,7 +158,7 @@ bool TrackingOptions::is_legal() const {
       ret = ret and check_option<double>("transParameter");
       ret = ret and check_option<double>("borderAwareWidth");
       ret = ret and check_option<bool  >("withConstraints");
-      ret = ret and check_option<double>("cplexTimeout");
+      ret = ret and check_option<double>("cplex_timeout");
     } else {
       std::cout << "Unknown tracker \"" << tracker_type << "\"" << std::endl;
       ret = false;
@@ -311,7 +311,7 @@ EventVectorVectorType track(
         options.get_option<double>("transParameter"),
         options.get_option<double>("borderAwareWidth"),
         options.get_option<bool  >("withConstraints"),
-        options.get_option<double>("cplexTimeout"))));
+        options.get_option<double>("cplex_timeout"))));
     // merger resolving
     return tracker.resolve_mergers(
       ret_ptr,
