@@ -30,6 +30,7 @@ class Lineage {
  private:
   void handle_event(const pgmlink::Event& event, const int timestep);
   void handle_appearance(const pgmlink::Event& event, const int timestep);
+  void handle_disappearance(const pgmlink::Event& event, const int timestep);
   void handle_move(const pgmlink::Event& event, const int timestep);
   void handle_division(const pgmlink::Event& event, const int timestep);
   void start_track(

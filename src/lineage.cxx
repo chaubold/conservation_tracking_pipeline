@@ -16,7 +16,7 @@ Lineage::Lineage(const EventVectorVectorType& events) {
       event_it != events[timestep].end();
       event_it++ )
     {
-      std::cout << "\t" << *event_it << std::endl;
+      // std::cout << "\t" << *event_it << std::endl;
       handle_event(*event_it, timestep);
     }
   }
@@ -33,6 +33,8 @@ void Lineage::handle_event(const pgmlink::Event& event, const int timestep) {
   case pgmlink::Event::Appearance:
     handle_appearance(event, timestep);
     break;
+  case pgmlink::Event::Disappearance:
+    handle_disappearance(event, timestep);
   default:
     break;
   }
@@ -45,6 +47,22 @@ void Lineage::handle_appearance(
   TraxelIndexType traxel_index(timestep, event.traxel_ids[0]);
   // start a new track for this traxel index
   start_track(traxel_index);
+}
+
+void Lineage::handle_disappearance(
+  const pgmlink::Event& event,
+  const int timestep)
+{
+  TraxelIndexType traxel_index(timestep - 1, event.traxel_ids[0]);
+  // check if the parent track exists
+  TraxelTrackIndexMapType::const_iterator track_it = traxel_track_map_.find(
+    traxel_index);
+  // start a new track for the parent traxel if no track exists
+  if (track_it == traxel_track_map_.end()) {
+    std::cout << "No parent track found for disappearance at timestep "
+      << timestep << std::endl;
+    start_track(traxel_index);
+  }
 }
 
 void Lineage::handle_move(const pgmlink::Event& event, const int timestep) {
