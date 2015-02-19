@@ -25,6 +25,7 @@ if __name__ == "__main__":
         print "Convert {} to {}".format(filename, filename_new)
         # read the file
         image = plt.imread(filename).astype(numpy.double)
+        image = numpy.flipud(image)
         if not normalize:
             if image.max() != 0:
                 normalize = image.max()
