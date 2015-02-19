@@ -311,7 +311,7 @@ int main(int argc, char** argv) {
       // read the label image
       isbi::read_tif_image(*fn_it, labelimage);
       // relabel the label image
-      lineage.relabel<2>(labelimage, timestep);
+      lineage.relabel<2>(labelimage, timestep, coordinate_map_ptr);
       // save results
       std::stringstream labelimage_path;
       labelimage_path << res_dir_str << "/mask"

@@ -26,13 +26,16 @@ class Lineage {
   template<int N>
   void relabel(
     vigra::MultiArrayView<N, LabelType>& label_image,
-    const int timestep) const;
+    const int timestep,
+    const CoordinateMapPtrType coordinate_map_ptr
+      = CoordinateMapPtrType()) const;
  private:
   void handle_event(const pgmlink::Event& event, const int timestep);
   void handle_appearance(const pgmlink::Event& event, const int timestep);
   void handle_disappearance(const pgmlink::Event& event, const int timestep);
   void handle_move(const pgmlink::Event& event, const int timestep);
   void handle_division(const pgmlink::Event& event, const int timestep);
+  void handle_resolvedto(const pgmlink::Event& event, const int timestep);
   void start_track(
     const TraxelIndexType& traxel_index,
     const LabelType parent_track_index = 0);
@@ -42,6 +45,7 @@ class Lineage {
   TraxelTrackIndexMapType traxel_track_map_;
   TrackTraxelIndexMapType track_traxel_map_;
   std::map<LabelType, LabelType> track_track_parent_map_;
+  std::map<TraxelIndexType, std::vector<TraxelIndexType> > resolved_map_;
   friend std::ostream& operator<<(std::ostream& s, const Lineage& lineage);
 };
 
@@ -49,8 +53,23 @@ class Lineage {
 template<int N>
 void Lineage::relabel(
   vigra::MultiArrayView<N, LabelType>& label_image,
-  const int timestep) const
+  const int timestep,
+  const CoordinateMapPtrType coordinate_map_ptr) const
 {
+  if (coordinate_map_ptr) {
+    for(auto it = resolved_map_.begin(); it != resolved_map_.end(); it++) {
+      const TraxelIndexType& traxel_index = it->first;
+      if (traxel_index.first == timestep) {
+        for (TraxelIndexType new_index : it->second) {
+          pgmlink::update_labelimage<N, LabelType>(
+            coordinate_map_ptr,
+            label_image,
+            new_index.first,
+            new_index.second);
+        }
+      }
+    }
+  }
   TraxelTrackIndexMapType::const_iterator traxel_track_it;
   typedef typename vigra::MultiArrayView<N, LabelType>::iterator ImageItType;
   for (ImageItType it = label_image.begin(); it != label_image.end(); it++) {

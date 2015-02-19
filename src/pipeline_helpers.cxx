@@ -386,7 +386,8 @@ EventVectorVectorType track(
       options.get_option<bool  >("withTracklets"),
       options.get_option<int   >("nDim"),
       options.get_option<double>("transParameter"),
-      options.get_option<bool  >("withConstraints"));
+      options.get_option<bool  >("withConstraints"),
+      false); // with multi frame moves
   } else {
     // throw an error
     throw std::runtime_error("Unknown tracker \"" + tracker_type + "\"");

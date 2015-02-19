@@ -35,6 +35,8 @@ void Lineage::handle_event(const pgmlink::Event& event, const int timestep) {
     break;
   case pgmlink::Event::Disappearance:
     handle_disappearance(event, timestep);
+  case pgmlink::Event::ResolvedTo:
+    handle_resolvedto(event, timestep);
   default:
     break;
   }
@@ -100,6 +102,17 @@ void Lineage::handle_division(const pgmlink::Event& event, const int timestep) {
   // start the new tracks and set the parent map correctly
   start_track(lchild_index, traxel_track_map_[parent_index]);
   start_track(rchild_index, traxel_track_map_[parent_index]);
+}
+
+void Lineage::handle_resolvedto(
+  const pgmlink::Event& event, const int timestep)
+{
+  TraxelIndexType old_index(timestep, event.traxel_ids[0]);
+  resolved_map_[old_index].clear();
+  for (size_t n = 1; n < event.traxel_ids.size(); n++) {
+    TraxelIndexType new_index(timestep, event.traxel_ids[n]);
+    resolved_map_[old_index].push_back(new_index);
+  }
 }
 
 void Lineage::start_track(

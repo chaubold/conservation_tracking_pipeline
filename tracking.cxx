@@ -290,7 +290,7 @@ int main(int argc, char** argv) {
       isbi::Segmentation<2> segmentation;
       isbi::read_tif_image(filename, segmentation.label_image_);
       // relabel the label image
-      lineage.relabel<2>(segmentation.label_image_, timestep);
+      lineage.relabel<2>(segmentation.label_image_, timestep, coordinate_map_ptr);
       // save the relabeled image
       std::stringstream res_image_path;
       res_image_path << res_dir_str << "/" << "mask"
