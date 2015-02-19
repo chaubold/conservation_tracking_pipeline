@@ -152,9 +152,7 @@ int TraxelExtractor<N>::extract(
     image);
   CoupledIteratorType end_it = start_it.getEndIterator();
   // extract the features
-  std::cout << "Extract the features" << std::endl;
   vigra::acc::extractFeatures(start_it, end_it, acc_chain);
-  std::cout << "Done" << std::endl;
   // loop over all labels
   for (size_t label_id = 1; label_id <= segmentation.label_count_; label_id++) {
     extract_for_label(
@@ -230,9 +228,6 @@ int TraxelExtractor<N>::extract_for_label(
     }
     // create the traxel and add it to the traxel store
     pgmlink::Traxel traxel(label_id, timestep, feature_map);
-    std::cout << "Detection probabilitiy for " << traxel << ": ";
-    dump(feature_map["detProb"]);
-    std::cout << std::endl;
     traxels.push_back(traxel);
   }
   return return_status;

@@ -45,6 +45,10 @@ class TrackingOptions {
 };
 
 
+// for logging of the traxelstore
+void print_traxelstore(std::ostream& stream, const TraxelStoreType& ts);
+
+
 // strip trailing slash
 // works only for null terminated cstrings
 void rstrip(char* c, char r);

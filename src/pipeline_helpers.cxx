@@ -168,6 +168,46 @@ bool TrackingOptions::is_legal() const {
   return ret;
 }
 
+
+template<typename T>
+void print_vector(std::ostream& stream, const std::vector<T>& vec) {
+  if (vec.size() != 0) {
+    stream << "(";
+    for (size_t n = 0; n < (vec.size() - 1); n++) {
+      stream << vec[n] << ", ";
+    }
+    stream << (vec.back()) << ")";
+  } else {
+    stream << "()";
+  }
+}
+
+void print_traxelstore(std::ostream& stream, const TraxelStoreType& ts) {
+  for(
+    TraxelStoreType::const_iterator ts_it = ts.begin();
+    ts_it != ts.end();
+    ts_it++)
+  {
+    stream << *ts_it;
+    FeatureMapType::const_iterator fmap_it = (ts_it->features).find("com");
+    if (fmap_it != (ts_it->features).end()) {
+      stream << " at ";
+      print_vector(stream, fmap_it->second);
+    }
+    fmap_it = (ts_it->features).find("detProb");
+    if (fmap_it != (ts_it->features).end()) {
+      stream << ", detProb: ";
+      print_vector(stream, fmap_it->second);
+    }
+    fmap_it = (ts_it->features).find("divProb");
+    if (fmap_it != (ts_it->features).end()) {
+      stream << ", divProb: ";
+      print_vector(stream, fmap_it->second);
+    }
+    stream << std::endl;
+  }
+}
+
 /** @brief Removes a single trailing character from the string
  */
 void rstrip(char* c, char r) {
@@ -297,13 +337,13 @@ EventVectorVectorType track(
       field_of_view,
       "none"); // event_vector_dump_filename
 
-    std::cout << "Creating ConsTracking with parameters:" << std::endl;
-    std::cout << "\tmaxObj: " << options.get_option<int   >("maxObj") << std::endl;
-    std::cout << "\tsizeDependent: " << options.get_option<bool  >("sizeDependent") << std::endl;
-    std::cout << "\tavgSize: " << options.get_option<double>("avgSize") << std::endl;
-    std::cout << "\tmaxDist: " << options.get_option<double>("maxDist") << std::endl;
-    std::cout << "\twithDivisions: " << options.get_option<bool  >("withDivisions") << std::endl;
-    std::cout << "\tdivThreshold: " << options.get_option<double>("divThreshold") << std::endl;
+    // std::cout << "Creating ConsTracking with parameters:" << std::endl;
+    // std::cout << "\tmaxObj: " << options.get_option<int   >("maxObj") << std::endl;
+    // std::cout << "\tsizeDependent: " << options.get_option<bool  >("sizeDependent") << std::endl;
+    // std::cout << "\tavgSize: " << options.get_option<double>("avgSize") << std::endl;
+    // std::cout << "\tmaxDist: " << options.get_option<double>("maxDist") << std::endl;
+    // std::cout << "\twithDivisions: " << options.get_option<bool  >("withDivisions") << std::endl;
+    // std::cout << "\tdivThreshold: " << options.get_option<double>("divThreshold") << std::endl;
 
     // build the hypotheses graph
     tracker.build_hypo_graph(ts);
@@ -323,19 +363,19 @@ EventVectorVectorType track(
         options.get_option<bool  >("withConstraints"),
         options.get_option<double>("cplex_timeout"))));
 
-    std::cout << "\n\nCalling tracking with parameters:" << std::endl;
-    std::cout << "\tforbiddenCost: " << options.get_option<double>("forbiddenCost") << std::endl;
-    std::cout << "\tepGap: " << options.get_option<double>("epGap") << std::endl;
-    std::cout << "\twithTracklets: " << options.get_option<bool  >("withTracklets") << std::endl;
-    std::cout << "\tdivWeight: " << options.get_option<double>("divWeight") << std::endl;
-    std::cout << "\ttransWeight: " << options.get_option<double>("transWeight") << std::endl;
-    std::cout << "\tdisappearanceCost: " << options.get_option<double>("disappearanceCost") << std::endl;
-    std::cout << "\tappearanceCost: " << options.get_option<double>("appearanceCost") << std::endl;
-    std::cout << "\tnDim: " << options.get_option<int   >("nDim") << std::endl;
-    std::cout << "\ttransParameter: " << options.get_option<double>("transParameter") << std::endl;
-    std::cout << "\tborderAwareWidth: " << options.get_option<double>("borderAwareWidth") << std::endl;
-    std::cout << "\twithConstraints: " << options.get_option<bool  >("withConstraints") << std::endl;
-    std::cout << "\tcplex_timeout: " << options.get_option<double>("cplex_timeout") << std::endl;
+    // std::cout << "\n\nCalling tracking with parameters:" << std::endl;
+    // std::cout << "\tforbiddenCost: " << options.get_option<double>("forbiddenCost") << std::endl;
+    // std::cout << "\tepGap: " << options.get_option<double>("epGap") << std::endl;
+    // std::cout << "\twithTracklets: " << options.get_option<bool  >("withTracklets") << std::endl;
+    // std::cout << "\tdivWeight: " << options.get_option<double>("divWeight") << std::endl;
+    // std::cout << "\ttransWeight: " << options.get_option<double>("transWeight") << std::endl;
+    // std::cout << "\tdisappearanceCost: " << options.get_option<double>("disappearanceCost") << std::endl;
+    // std::cout << "\tappearanceCost: " << options.get_option<double>("appearanceCost") << std::endl;
+    // std::cout << "\tnDim: " << options.get_option<int   >("nDim") << std::endl;
+    // std::cout << "\ttransParameter: " << options.get_option<double>("transParameter") << std::endl;
+    // std::cout << "\tborderAwareWidth: " << options.get_option<double>("borderAwareWidth") << std::endl;
+    // std::cout << "\twithConstraints: " << options.get_option<bool  >("withConstraints") << std::endl;
+    // std::cout << "\tcplex_timeout: " << options.get_option<double>("cplex_timeout") << std::endl;
 
     // merger resolving
     return tracker.resolve_mergers(

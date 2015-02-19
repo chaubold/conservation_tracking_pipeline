@@ -283,8 +283,9 @@ int main(int argc, char** argv) {
     // add remaining traxels (after switching in "last frame") to traxelstore
     for(pgmlink::Traxel& t : traxels_per_frame[1 - current_frame])
       pgmlink::add(ts, t);
-
     // end of iteration over all filenames/timesteps
+
+    //isbi::print_traxelstore(std::cout, ts);
 
     //=========================================================================
     // track!

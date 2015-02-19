@@ -10,7 +10,7 @@ namespace isbi_pipeline {
 Lineage::Lineage(const EventVectorVectorType& events) {
   track_count_ = 0;
   for (int timestep = 0; timestep < int(events.size()); timestep++) {
-    std::cout << "Timestep " << timestep << std::endl;
+    // std::cout << "Timestep " << timestep << std::endl;
     for (
       EventVectorType::const_iterator event_it = events[timestep].begin();
       event_it != events[timestep].end();
@@ -59,8 +59,8 @@ void Lineage::handle_disappearance(
     traxel_index);
   // start a new track for the parent traxel if no track exists
   if (track_it == traxel_track_map_.end()) {
-    std::cout << "No parent track found for disappearance at timestep "
-      << timestep << std::endl;
+    // std::cout << "No parent track found for disappearance at timestep "
+    //   << timestep << std::endl;
     start_track(traxel_index);
   }
 }
@@ -74,8 +74,8 @@ void Lineage::handle_move(const pgmlink::Event& event, const int timestep) {
     parent_index);
   // start a new track if no parent exists
   if (track_it == traxel_track_map_.end()) {
-    std::cout << "No parent track found for move at timstep "
-      << timestep << std::endl;
+    // std::cout << "No parent track found for move at timstep "
+    //   << timestep << std::endl;
     start_track(parent_index);
   }
   // handle the move
@@ -93,8 +93,8 @@ void Lineage::handle_division(const pgmlink::Event& event, const int timestep) {
     parent_index);
   // start a new track if no parent exists
   if (track_it == traxel_track_map_.end()) {
-    std::cout << "No parent track found for division at timstep "
-      << timestep << std::endl;
+    // std::cout << "No parent track found for division at timstep "
+    //   << timestep << std::endl;
     start_track(parent_index);
   }
   // start the new tracks and set the parent map correctly

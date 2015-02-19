@@ -174,16 +174,16 @@ void DivisionFeatureExtractor<N, LabelType>::extract(std::vector<pgmlink::Traxel
 {
 	for(pgmlink::Traxel& t : traxels_current_frame)
 	{
-		std::cout << "Investigating " << t << " at com " << t.features["RegionCenter"] << std::endl;
+		// std::cout << "Investigating " << t << " at com " << t.features["RegionCenter"] << std::endl;
 		std::vector<TraxelWithDistance> nearest_neighbors = find_nearest_neighbors(t.features["RegionCenter"],
 																				   traxels_next_frame,
 																				   label_image_next_frame);
 
-		std::cout << "Distances after sorting:" << std::endl;
-		for(TraxelWithDistance& twd : nearest_neighbors)
-		{
-			std::cout << "\t" << traxels_next_frame[twd.first] << " at distance " << twd.second << std::endl;
-		}
+		// std::cout << "Distances after sorting:" << std::endl;
+		// for(TraxelWithDistance& twd : nearest_neighbors)
+		// {
+		// 	std::cout << "\t" << traxels_next_frame[twd.first] << " at distance " << twd.second << std::endl;
+		// }
 
 		compute_traxel_division_features(t, nearest_neighbors, traxels_next_frame);
 
@@ -372,12 +372,12 @@ void DivisionFeatureExtractor<N, LabelType>::get_division_probability(
 		probabilities += probabilities_temp;
 	}
 
-	std::cout << "RF feature set is: " << features << std::endl;
+	// std::cout << "RF feature set is: " << features << std::endl;
 
 	// fill the features map
 	traxel.features["divProb"].clear();
 	traxel.features["divProb"].push_back(probabilities(0, 1));
-	std::cout << traxel << " has divProb: " << traxel.features["divProb"] << std::endl;
+	// std::cout << traxel << " has divProb: " << traxel.features["divProb"] << std::endl;
 }
 
 } // namespace isbi_pipeline
