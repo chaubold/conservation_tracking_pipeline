@@ -1,11 +1,28 @@
 // vigra
-#include <vigra/labelimage.hxx> /* for labelImageWithBackground */
+#include <vigra/multi_labeling.hxx> /* for labelMultiArrayWithBackground */
 #include <vigra/multi_tensorutilities.hxx>
 #include <vigra/hdf5impex.hxx> /* for writeHDF5 */
 
 #include "segmentation.hxx"
 
 namespace isbi_pipeline {
+
+////
+//// local functions
+////
+template<int N>
+typename vigra::MultiArrayShape<N+1>::type append_to_shape(
+  const typename vigra::MultiArrayShape<N>::type& shape,
+  const size_t value)
+{
+  typename vigra::MultiArrayShape<N+1>::type ret;
+  for (size_t i = 0; i < N; i++) {
+    ret[i] = shape[i];
+  }
+  ret[N] = value;
+  return ret;
+}
+
 
 ////
 //// class FeatureCalculator
@@ -172,53 +189,64 @@ int FeatureCalculator<N>::calculate_hessian_of_gaussian_eigenvalues(
   return 0;
 }
 
-template<>
-int FeatureCalculator<2>::calculate(
-  const vigra::MultiArrayView<2, DataType>& image,
-  vigra::MultiArray<3, DataType>& features)
+template<int N>
+int FeatureCalculator<N>::calculate(
+  const vigra::MultiArrayView<N, DataType>& image,
+  vigra::MultiArray<N+1, DataType>& features)
 {
+  typedef typename vigra::MultiArrayShape<N+1>::type FeaturesShapeType;
+  typedef typename vigra::MultiArrayShape<N>::type ImageShapeType;
+  typedef typename vigra::MultiArrayView<N+1, DataType> FeaturesViewType;
   // initialize offset and size of the current features along the
   // feature vectors
   std::vector<size_t> offsets;
-  size_t offset = 0;
-  size_t size = 0;
-  features.reshape(
-    vigra::Shape3(image.shape(0), image.shape(1), get_feature_size()));
+  FeaturesShapeType features_shape = append_to_shape<N>(
+    image.shape(),
+    get_feature_size());
+  features.reshape(features_shape);
   
-  // store all offsets
-  for (
-    StringDataPairVectorType::const_iterator it = feature_scales_.begin();
-    it != feature_scales_.end();
-    it++
-  ) 
+  // store all offsets and keep scope of variable offset within the
+  // for loop
   {
-    offsets.push_back(offset);
-    offset += get_feature_size(it->first);
+    size_t offset = 0;
+    for (
+      StringDataPairVectorType::const_iterator it = feature_scales_.begin();
+      it != feature_scales_.end();
+      it++
+    ) {
+      offsets.push_back(offset);
+      offset += get_feature_size(it->first);
+    }
   }
 
   // compute features in parallel
   #pragma omp parallel for
-  for(size_t fs = 0; fs < feature_scales_.size(); fs++)
-  {
-    // get the size of the current feature and create a view of all
-    // feature vectors
-    size = get_feature_size(feature_scales_[fs].first);
-    vigra::MultiArrayView<3, DataType> features_v;
-    features_v = features.subarray(
-      vigra::Shape3(0, 0, offsets[fs]),
-      vigra::Shape3(image.shape(0), image.shape(1), offsets[fs] + size));
-    if (!feature_scales_[fs].first.compare("GaussianSmoothing")) {
-      calculate_gaussian_smoothing(image, features_v, feature_scales_[fs].second);
-    } else if (!feature_scales_[fs].first.compare("LaplacianOfGaussian")) {
-      calculate_laplacian_of_gaussians(image, features_v, feature_scales_[fs].second);
-    } else if (!feature_scales_[fs].first.compare("GaussianGradientMagnitude")) {
-      calculate_gaussian_gradient_magnitude(image, features_v, feature_scales_[fs].second);
-    } else if (!feature_scales_[fs].first.compare("DifferenceOfGaussians")) {
-      calculate_difference_of_gaussians(image, features_v, feature_scales_[fs].second);
-    } else if (!feature_scales_[fs].first.compare("StructureTensorEigenvalues")) {
-      calculate_structure_tensor_eigenvalues(image, features_v, feature_scales_[fs].second);
-    } else if (!feature_scales_[fs].first.compare("HessianOfGaussianEigenvalues")) {
-      calculate_hessian_of_gaussian_eigenvalues(image, features_v, feature_scales_[fs].second);
+  for(size_t i = 0; i < feature_scales_.size(); i++) {
+    // get the offset and size of the current feature in the feature
+    // arrays
+    const size_t& offset = offsets[i];
+    const size_t& size = get_feature_size(feature_scales_[i].first);
+    // create the bounding box from box_min to box_max
+    FeaturesShapeType box_min(0);
+    box_min[N] = offset;
+    FeaturesShapeType box_max = append_to_shape<N>(image.shape(), offset + size);
+    // create a view to this bounding box
+    FeaturesViewType features_view = features.subarray(box_min, box_max);
+    // branch between the different features
+    const std::string& feature_name = feature_scales_[i].first;
+    const DataType& scale = feature_scales_[i].second;
+    if (!feature_name.compare("GaussianSmoothing")) {
+      calculate_gaussian_smoothing(image, features_view, scale);
+    } else if (!feature_name.compare("LaplacianOfGaussian")) {
+      calculate_laplacian_of_gaussians(image, features_view, scale);
+    } else if (!feature_name.compare("GaussianGradientMagnitude")) {
+      calculate_gaussian_gradient_magnitude(image, features_view, scale);
+    } else if (!feature_name.compare("DifferenceOfGaussians")) {
+      calculate_difference_of_gaussians(image, features_view, scale);
+    } else if (!feature_name.compare("StructureTensorEigenvalues")) {
+      calculate_structure_tensor_eigenvalues(image, features_view, scale);
+    } else if (!feature_name.compare("HessianOfGaussianEigenvalues")) {
+      calculate_hessian_of_gaussian_eigenvalues(image, features_view, scale);
     } else {
       throw std::runtime_error("Invalid feature name used");
     }
@@ -226,51 +254,9 @@ int FeatureCalculator<2>::calculate(
   return 0;
 }
 
-template<>
-int FeatureCalculator<3>::calculate(
-  const vigra::MultiArrayView<3, DataType>& image,
-  vigra::MultiArray<4, DataType>& features)
-{
-  // initialize offset and size of the current features along the
-  // feature vectors
-  size_t offset = 0;
-  size_t size = 0;
-  features.reshape(vigra::Shape4(
-    image.shape(0), image.shape(1), image.shape(2), get_feature_size()));
-  for (
-    StringDataPairVectorType::const_iterator it = feature_scales_.begin();
-    it != feature_scales_.end();
-    it++
-  ) {
-    // get the size of the current feature and create a view of all
-    // feature vectors
-    size = get_feature_size(it->first);
-    vigra::MultiArrayView<4, DataType> features_v;
-    features_v = features.subarray(
-      vigra::Shape4(0, 0, 0, offset),
-      vigra::Shape4(image.shape(0), image.shape(1), image.shape(2), offset+size));
-    if (!it->first.compare("GaussianSmoothing")) {
-      calculate_gaussian_smoothing(image, features_v, it->second);
-    } else if (!it->first.compare("LaplacianOfGaussian")) {
-      calculate_laplacian_of_gaussians(image, features_v, it->second);
-    } else if (!it->first.compare("GaussianGradientMagnitude")) {
-      calculate_gaussian_gradient_magnitude(image, features_v, it->second);
-    } else if (!it->first.compare("DifferenceOfGaussians")) {
-      calculate_difference_of_gaussians(image, features_v, it->second);
-    } else if (!it->first.compare("StructureTensorEigenvalues")) {
-      calculate_structure_tensor_eigenvalues(image, features_v, it->second);
-    } else if (!it->first.compare("HessianOfGaussianEigenvalues")) {
-      calculate_hessian_of_gaussian_eigenvalues(image, features_v, it->second);
-    } else {
-      return 1;
-    }
-    offset += size;
-  }
-  return 0;
-}
-
 // explicit instantiation
 template class FeatureCalculator<2>;
+template class FeatureCalculator<3>;
 
 ////
 //// struct Segmentation
@@ -280,11 +266,8 @@ void Segmentation<N>::initialize(const vigra::MultiArray<N, DataType>& image) {
   segmentation_image_.reshape(image.shape());
   label_image_.reshape(image.shape());
   // TODO ugly
-  typename vigra::MultiArrayShape<N+1>::type prediction_map_shape;
-  for (size_t i = 0; i < N; i++) {
-    prediction_map_shape[i] = image.shape(i);
-  }
-  prediction_map_shape[N] = 2;
+  typename vigra::MultiArrayShape<N+1>::type prediction_map_shape =
+    append_to_shape<N>(image.shape(), 2);
   prediction_map_.reshape(prediction_map_shape);
   prediction_map_.init(0.0);
 }
@@ -333,8 +316,8 @@ int Segmentation<N>::read_hdf5(
 }
 
 // explicit instantiation
-// TODO for dim = 3 as well
 template class Segmentation<2>;
+template class Segmentation<3>;
 
 ////
 //// class SegmentationCalculator
@@ -376,11 +359,6 @@ int SegmentationCalculator<N>::calculate(
   // loop over all random forests for prediction probabilities
 
   #pragma omp parallel for
-  // for(
-  //   std::vector<RandomForestType>::const_iterator it = random_forests_.begin();
-  //   it != random_forests_.end();
-  //   it++
-  // ) {
   for(size_t rf = 0; rf < random_forests_.size(); rf++)
   {
     vigra::MultiArray<2, DataType> prediction_temp(pixel_count, 2);
@@ -405,20 +383,16 @@ int SegmentationCalculator<N>::calculate(
     }
   }
   // extract objects
-  segmentation.label_count_ = vigra::labelImageWithBackground(
-    vigra::srcImageRange(segmentation.segmentation_image_),
-    vigra::destImage(segmentation.label_image_),
-    1,
-    0);
-  // TODO:
-  // if (options.count("border") > 0) {
-  //   ignore_border_cc<2>(label_image, options["border"]);
-  // }
-  // done
+  segmentation.label_count_ = vigra::labelMultiArrayWithBackground(
+    segmentation.segmentation_image_,
+    segmentation.label_image_,
+    vigra::IndirectNeighborhood,
+    static_cast<LabelType>(0));
   return return_status;
 }
 
 // explicit instantiation
 template class SegmentationCalculator<2>;
+template class SegmentationCalculator<3>;
 
 } // namespace isbi_pipeline

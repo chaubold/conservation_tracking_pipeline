@@ -54,8 +54,10 @@ INCLUDE_DIRECTORIES(
 
 INCLUDE_DIRECTORIES(include ${CPLEX_INCLUDE_DIRS})
 
-#CPLEX switch to be compatible with STL
+# CPLEX switch to be compatible with STL
 ADD_DEFINITIONS(-DIL_STD)
+# add flags for vigra, otherwise we would get name conflicts
+ADD_DEFINITIONS(-DWITH_LEMON -DWITH_BOOST_GRAPH)
 
 ADD_LIBRARY(pipeline_helpers STATIC src/pipeline_helpers.cxx src/segmentation.cxx src/traxel_extractor.cxx src/lineage.cxx src/division_feature_extractor.cxx)
 
