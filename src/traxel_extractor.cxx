@@ -400,5 +400,6 @@ int TraxelExtractor<N>::get_detection_probability(
 
 // explicit instantiation
 template class TraxelExtractor<2>;
+template class TraxelExtractor<3>;
 
 } // end of namespace isbi_pipeline
