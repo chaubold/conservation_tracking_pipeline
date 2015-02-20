@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
       }
       // read the image
       DataMatrixType image;
-      isbi::read_tif_image(filename.c_str(), image);
+      vigra::importImage(filename, image);
       // calculate the features
       std::cout << "Calculate features" << std::endl;
       isbi::Segmentation<2> segmentation;
@@ -218,7 +218,7 @@ int main(int argc, char** argv) {
       labelimage_path << seg_dir_str << "/seg"
         << isbi::zero_padding(timestep, 3) << ".tif";
       std::cout << "Save results to " << labelimage_path.str() << std::endl;
-      isbi::save_tif_image(labelimage_path.str(), segmentation.label_image_);
+      vigra::exportImage(segmentation.label_image_, labelimage_path.str());
       labelimage_fn_vec.push_back(labelimage_path.str());
       // create traxels
       traxel_extractor.extract(
@@ -283,7 +283,7 @@ int main(int argc, char** argv) {
     {
       LabelMatrixType labelimage;
       // read the label image
-      isbi::read_tif_image(*fn_it, labelimage);
+      vigra::importImage(*fn_it, labelimage);
       // relabel the label image
       lineage.relabel<2>(labelimage, timestep, coordinate_map_ptr);
       // save results
@@ -291,7 +291,7 @@ int main(int argc, char** argv) {
       labelimage_path << res_dir_str << "/mask"
         << isbi::zero_padding(timestep, 3) << ".tif";
       std::cout << "Save results to " << labelimage_path.str() << std::endl;
-      isbi::save_tif_image(labelimage_path.str(), labelimage);
+      vigra::exportImage(labelimage, labelimage_path.str());
     }
 
     return 0;

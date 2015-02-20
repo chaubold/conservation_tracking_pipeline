@@ -187,10 +187,10 @@ int main(int argc, char** argv) {
       std::cout << "with segmentation " + seg_filename + " ...\n";
       // load the raw image
       DataMatrixType image;
-      isbi::read_tif_image(raw_filename, image);
+      vigra::importImage(raw_filename, image);
       // load the label image
       isbi::Segmentation<2> segmentation;
-      isbi::read_tif_image(seg_filename, segmentation.label_image_);
+      vigra::importImage(seg_filename, segmentation.label_image_);
       // read label count
       isbi::LabelType min, max;
       segmentation.label_image_.minmax(&min, &max);
@@ -260,7 +260,7 @@ int main(int argc, char** argv) {
       std::cout << "relabel " << filename << std::endl;
       // load the segmentation once again
       isbi::Segmentation<2> segmentation;
-      isbi::read_tif_image(filename, segmentation.label_image_);
+      vigra::importImage(filename, segmentation.label_image_);
       // relabel the label image
       lineage.relabel<2>(segmentation.label_image_, timestep, coordinate_map_ptr);
       // save the relabeled image
@@ -268,7 +268,7 @@ int main(int argc, char** argv) {
       res_image_path << res_dir_str << "/" << "mask"
         << isbi::zero_padding(timestep, 3) << ".tif";
       std::cout << "Save results to " << res_image_path.str() << std::endl;
-      isbi::save_tif_image(res_image_path.str(), segmentation.label_image_);
+      vigra::exportImage(segmentation.label_image_, res_image_path.str());
     }
 
     return 0;

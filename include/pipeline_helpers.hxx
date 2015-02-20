@@ -68,14 +68,6 @@ int read_region_features_from_file(
   const std::string path,
   std::vector<std::string>& feature_list);
 
-// read tif image
-template<typename T>
-int read_tif_image(const std::string path, vigra::MultiArray<2, T>& image);
-
-// save tif image
-template<typename T>
-int save_tif_image(const std::string path, const vigra::MultiArray<2, T>& image);
-
 // get random_forests from file
 bool get_rfs_from_file(
   RandomForestVectorType& rfs,
@@ -125,32 +117,6 @@ OutputIterator copy_if_own (
 /* -------------------------------------------------- */
 /*                   IMPLEMENTATION                   */
 /* -------------------------------------------------- */
-
-template<typename T>
-int read_tif_image(
-  const std::string path,
-  vigra::MultiArray<2, T>& image)
-{
-  // read the image
-  vigra::ImageImportInfo import_info(path.c_str());
-  vigra::Shape2 shape(import_info.width(), import_info.height());
-  // initialize the multi array
-  image.reshape(shape);
-  // read the image pixel data
-  vigra::importImage(import_info, vigra::destImage(image));
-  return 0;
-}
-
-template<typename T>
-int save_tif_image(
-  const std::string path,
-  const vigra::MultiArray<2, T>& image)
-{
-  vigra::exportImage(
-    vigra::srcImageRange(image),
-    vigra::ImageExportInfo(path.c_str()));
-  return 0;
-}
 
 template <class InputIterator, class OutputIterator, class UnaryPredicate>
 OutputIterator copy_if_own(
