@@ -66,29 +66,9 @@ int main(int argc, char** argv) {
     isbi::PathType res_dir = fs::system_complete(res_dir_str);
 
     // check validity of dataset variables
-    if (!fs::exists(raw_dir)) {
-      throw std::runtime_error(raw_dir_str + " does not exist");
-    } else if (!fs::is_directory(raw_dir)) {
-      throw std::runtime_error(raw_dir_str + " is not a directory");
-    }
-    if (!fs::exists(seg_dir)) {
-      if (!fs::create_directory(seg_dir)) {
-        throw std::runtime_error("Could not create directory: " + seg_dir_str);
-      }
-    } else if (!fs::is_directory(seg_dir)) {
-      throw std::runtime_error(seg_dir_str + " is not a directory");
-    }
-    if (!fs::exists(res_dir)) {
-      if (!fs::create_directory(res_dir)) {
-        throw std::runtime_error("Could not create directory: " + res_dir_str);
-      }
-    } else if (!fs::is_directory(res_dir)) {
-      throw std::runtime_error(res_dir_str + " is not a directory");
-    }
-
-    // make unary for copying only filepaths that contain *.tif
-    boost::function<bool (isbi::DirectoryEntryType&)> tif_chooser = bind(
-      isbi::contains_substring_boost_path, _1, ".tif");
+    isbi::check_directory(raw_dir, false);
+    isbi::check_directory(seg_dir, true);
+    isbi::check_directory(res_dir, true);
 
     // load segmentation classifier
     isbi::RandomForestVectorType rfs;
@@ -177,14 +157,8 @@ int main(int argc, char** argv) {
 
     int timestep = 0;
     pgmlink::TraxelStore ts;
-    // sort filenames
-    std::vector<isbi::PathType> fn_vec;
-    isbi::copy_if_own(
-      isbi::DirectoryIteratorType(raw_dir),
-      isbi::DirectoryIteratorType(),
-      std::back_inserter(fn_vec),
-      tif_chooser);
-    std::sort(fn_vec.begin(), fn_vec.end());
+    // get the sorted *.tif filenames
+    std::vector<isbi::PathType> fn_vec = isbi::get_files(raw_dir, ".tif", true);
     // initialize vector of label images
     std::vector<std::string> labelimage_fn_vec;
     // create the feature and segmentation calculator

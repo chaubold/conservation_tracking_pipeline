@@ -68,27 +68,9 @@ int main(int argc, char** argv) {
     isbi::PathType res_dir = fs::system_complete(seg_dir_str);
 
     // check validity of dataset variables
-    if (!fs::exists(raw_dir)) {
-      throw std::runtime_error(raw_dir_str + " does not exist");
-    } else if (!fs::is_directory(raw_dir)) {
-      throw std::runtime_error(raw_dir_str + " is not a directory");
-    }
-    if (!fs::exists(seg_dir)) {
-      throw std::runtime_error(seg_dir_str + " does not exist");
-    } else if (!fs::is_directory(seg_dir)) {
-      throw std::runtime_error(seg_dir_str + " is not a directory");
-    }
-    if (!fs::exists(res_dir)) {
-      if (!fs::create_directory(res_dir)) {
-        throw std::runtime_error("Could not create directory: " + res_dir_str);
-      }
-    } else if (!fs::is_directory(res_dir)) {
-      throw std::runtime_error(res_dir_str + " is not a directory");
-    }
-
-    // make unary for copying only filepaths that contain *.tif
-    boost::function<bool (isbi::DirectoryEntryType&)> tif_chooser = bind(
-      isbi::contains_substring_boost_path, _1, ".tif");
+    isbi::check_directory(raw_dir, false);
+    isbi::check_directory(seg_dir, false);
+    isbi::check_directory(res_dir, true);
 
     // get config
     isbi::TrackingOptions options(config_file_path);
@@ -163,20 +145,10 @@ int main(int argc, char** argv) {
     int timestep = 0;
     isbi::TraxelStoreType ts;
     // sort filenames
-    std::vector<isbi::PathType> raw_fn_vec;
-    isbi::copy_if_own(
-      isbi::DirectoryIteratorType(raw_dir),
-      isbi::DirectoryIteratorType(),
-      std::back_inserter(raw_fn_vec),
-      tif_chooser);
-    std::sort(raw_fn_vec.begin(), raw_fn_vec.end());
-    std::vector<isbi::PathType> seg_fn_vec;
-    isbi::copy_if_own(
-      isbi::DirectoryIteratorType(seg_dir),
-      isbi::DirectoryIteratorType(),
-      std::back_inserter(seg_fn_vec),
-      tif_chooser);
-    std::sort(seg_fn_vec.begin(), seg_fn_vec.end());
+    std::vector<isbi::PathType> raw_fn_vec =
+      isbi::get_files(raw_dir, ".tif", true);
+    std::vector<isbi::PathType> seg_fn_vec =
+      isbi::get_files(seg_dir, ".tif", true);
     // check if they are of the same length
     if (raw_fn_vec.size() != seg_fn_vec.size()) {
       throw std::runtime_error(

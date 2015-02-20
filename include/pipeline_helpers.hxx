@@ -102,6 +102,17 @@ bool contains_substring_boost_path(
   std::string substr);
 
 
+// check if a directory exists
+void check_directory(const PathType& path, bool create_if_not = false);
+
+
+// get files in a path
+std::vector<PathType> get_files(
+  const PathType& path,
+  const std::string extension_filter,
+  bool sort = false);
+
+
 // copy_if_own because not using c++11
 template <class InputIterator, class OutputIterator, class UnaryPredicate>
 OutputIterator copy_if_own (

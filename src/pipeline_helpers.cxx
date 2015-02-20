@@ -23,6 +23,8 @@
 
 namespace isbi_pipeline {
 
+namespace fs = boost::filesystem;
+
 // local typdef
 typedef StringStringMapType::const_iterator StringStringMapConstItType;
 
@@ -411,6 +413,43 @@ bool contains_substring_boost_path(
   std::string substr)
 {
   return contains_substring(p.path().string(), substr);
+}
+
+void check_directory(const PathType& path, bool create_if_not) {
+  // does path exist?
+  if (!fs::exists(path)) {
+    // if not, check if it should be created
+    if (create_if_not) {
+      // create directory
+      if (!fs::create_directory(path)) {
+        throw std::runtime_error("Could not create directory: " + path.string());
+      }
+    } else {
+      // else throw error
+      throw std::runtime_error(path.string() + " does not exist");
+    }
+  } else if (!fs::is_directory(path)) {
+    // throw an error if the path exists but is not a directory
+    throw std::runtime_error(path.string() + " is not a directory");
+  }
+}
+
+std::vector<PathType> get_files(
+  const PathType& path,
+  const std::string extension_filter,
+  bool sort)
+{
+  std::vector<PathType> ret;
+  for(DirectoryIteratorType it(path); it != DirectoryIteratorType(); it++) {
+    std::string extension((it->path()).extension().string());
+    if (!extension.compare(extension_filter)) {
+      ret.push_back(*it);
+    }
+  }
+  if (sort) {
+    std::sort(ret.begin(), ret.end());
+  }
+  return ret;
 }
 
 } // namespace isbi_pipeline
