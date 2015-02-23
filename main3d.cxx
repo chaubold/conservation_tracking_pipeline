@@ -158,9 +158,12 @@ int main(int argc, char** argv) {
     std::vector<isbi::PathType> fn_vec = isbi::get_files(raw_dir, ".tif", true);
     // initialize vector of label volumes
     std::vector<std::string> labelvolume_fn_vec;
+    // get the image scales for the constructor of the feature calculator
+    vigra::TinyVector<isbi::DataType, 3> image_scales;
+    image_scales = options.get_vector_option<isbi::DataType, 3>("scales");
     // create the feature and segmentation calculator
     boost::shared_ptr<isbi::FeatureCalculator<3> > feature_calc_ptr(
-      new isbi::FeatureCalculator<3>(feature_list));
+      new isbi::FeatureCalculator<3>(feature_list, image_scales));
     isbi::SegmentationCalculator<3> seg_calc(feature_calc_ptr, rfs);
     // create the traxel extractor
     isbi::TraxelExtractor<3> traxel_extractor(
@@ -279,9 +282,10 @@ int main(int argc, char** argv) {
       lineage.relabel<3>(labelvolume, timestep, coordinate_map_ptr);
       // save results
       std::stringstream labelvolume_path;
-      labelvolume_path << res_dir_str << "/mask" << isbi::zero_padding(timestep, 3);
+      labelvolume_path << res_dir_str << "/mask"
+        << isbi::zero_padding(timestep, 3) << ".tif";
       std::cout << "Save results to " << labelvolume_path.str() << std::endl;
-      vigra::VolumeExportInfo export_info(labelvolume_path.str().c_str(), ".tif");
+      vigra::VolumeExportInfo export_info(labelvolume_path.str().c_str());
       vigra::exportVolume(labelvolume, export_info);
     }
 

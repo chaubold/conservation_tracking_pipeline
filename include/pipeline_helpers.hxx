@@ -122,10 +122,6 @@ OutputIterator copy_if_own (
 template<typename T>
 void read_volume(T& volume, const std::string& filename);
 
-
-template<typename T>
-void read_volume(T& volume, const std::string& filename, size_t expand_z);
-
 /* -------------------------------------------------- */
 /*                   IMPLEMENTATION                   */
 /* -------------------------------------------------- */
