@@ -205,7 +205,7 @@ DivisionFeatureExtractor<N, LabelType>::find_nearest_neighbors(
 	for(int i = 0; i < N; i++)
 	{
 		start[i] = std::max(0, int(traxel_position[i] - template_size_ / 2));
-		stop[i]  = std::min(int(label_image_next_frame.shape(0)), int(traxel_position[i] + template_size_ / 2));
+		stop[i]  = std::min(int(label_image_next_frame.shape(i)), int(traxel_position[i] + template_size_ / 2));
 	}
 
 	vigra::MultiArrayView<N, LabelType> roi = label_image_next_frame.subarray(start, stop);

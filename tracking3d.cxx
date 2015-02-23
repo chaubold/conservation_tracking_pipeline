@@ -20,6 +20,7 @@
 #include <vigra/hdf5impex.hxx>
 #include <vigra/multi_array.hxx>
 #include <vigra/random_forest.hxx>
+#include <vigra/multi_resize.hxx>
 
 // pgmlink
 #include <pgmlink/tracking.h>
@@ -44,7 +45,7 @@ typedef vigra::MultiArray<3, isbi::LabelType> LabelVolumeType;
 int main(int argc, char** argv) {
   try {
     // check for correct number of arguments
-    if (argc < 9) {
+    if (argc < 8) {
       throw isbi::ArgumentError();
     }
 
@@ -57,9 +58,8 @@ int main(int argc, char** argv) {
     std::string res_dir_str(argv[3]);
     std::string config_file_path(argv[4]);
     std::string classifier_file_path(argv[5]);
-    std::string feature_file_path(argv[6]);
-    std::string region_feature_file_path(argv[7]);
-    std::string division_feature_file_path(argv[8]);
+    std::string region_feature_file_path(argv[6]);
+    std::string division_feature_file_path(argv[7]);
 
     isbi::PathType raw_dir = fs::system_complete(raw_dir_str);
     isbi::PathType seg_dir = fs::system_complete(seg_dir_str);
@@ -74,15 +74,6 @@ int main(int argc, char** argv) {
     isbi::RandomForestVectorType rfs;
     if (!(isbi::get_rfs_from_file(rfs, classifier_file_path))) {
       throw std::runtime_error("Could not load Random Forest classifier!");
-    }
-
-    // get features used in project
-    isbi::StringDataPairVectorType feature_list;
-    int read_status = isbi::read_features_from_file(
-      feature_file_path,
-      feature_list);
-    if (read_status == 1) {
-      throw std::runtime_error("Could not open file " + feature_file_path);
     }
 
     // get config
@@ -103,7 +94,7 @@ int main(int argc, char** argv) {
     size_t template_size = 0;
     if (!tracker_name.compare("ConsTracking")) {
       // get the region features used in project
-      read_status = isbi::read_region_features_from_file(
+      int read_status = isbi::read_region_features_from_file(
         region_feature_file_path,
         region_feature_list);
       if (read_status == 1) {
@@ -153,18 +144,16 @@ int main(int argc, char** argv) {
     // Segmentation
     //=========================================================================
     // run segmentation for all tif files in the given folder
-    // write results to <dataset_folder>/<dataset_sequence_segmentation>
-
     int timestep = 0;
     pgmlink::TraxelStore ts;
     // get the sorted *.tif filenames
-    std::vector<isbi::PathType> fn_vec = isbi::get_files(raw_dir, ".tif", true);
+    typedef std::vector<isbi::PathType> PathVectorType;
+    PathVectorType raw_fn_vec = isbi::get_files(raw_dir, ".tif", true);
     // initialize vector of label volumes
-    std::vector<std::string> labelvolume_fn_vec;
-    // create the feature and segmentation calculator
-    boost::shared_ptr<isbi::FeatureCalculator<3> > feature_calc_ptr(
-      new isbi::FeatureCalculator<3>(feature_list));
-    isbi::SegmentationCalculator<3> seg_calc(feature_calc_ptr, rfs);
+    PathVectorType seg_fn_vec = isbi::get_files(seg_dir, ".tif", true);
+    if (raw_fn_vec.size() != seg_fn_vec.size()) {
+      throw std::runtime_error("Different count of segmentation and raw images");
+    }
     // create the traxel extractor
     isbi::TraxelExtractor<3> traxel_extractor(
       max_object_num,
@@ -175,54 +164,47 @@ int main(int argc, char** argv) {
       options.get_option<int>("size_range_1"));
 
     // create division feature extractor
-    isbi::DivisionFeatureExtractor<3, isbi::LabelType> div_feature_extractor(template_size);
+    isbi::DivisionFeatureExtractor<3, isbi::LabelType> div_feature_extractor(
+      template_size);
     // storage for all traxels of a frame
     isbi::TraxelVectorType traxels_per_frame[2];
     size_t current_frame = 0;
 
     // iterate over the filenames TODO timestep counting not correct
-    for (
-      std::vector<isbi::PathType>::iterator dir_itr = fn_vec.begin();
-      dir_itr != fn_vec.end();
-      ++dir_itr, ++timestep)
+    std::vector<isbi::PathType>::iterator raw_fn_it = raw_fn_vec.begin();
+    std::vector<isbi::PathType>::iterator seg_fn_it = seg_fn_vec.begin();
+    for (; raw_fn_it != raw_fn_vec.end(); raw_fn_it++, seg_fn_it++,  timestep++)
     {
       // for easier readability, create references to traxels for last and
       // current frame:
       isbi::TraxelVectorType& traxels_current_frame = traxels_per_frame[current_frame];
       isbi::TraxelVectorType& traxels_last_frame = traxels_per_frame[1 - current_frame];
 
-      std::string filename(dir_itr->string());
-      std::cout << "processing " + filename + " ...\n";
-      if (!vigra::isImage(filename.c_str())) {
+      std::string raw_filename(raw_fn_it->string());
+      std::string seg_filename(seg_fn_it->string());
+      std::cout << "processing " + raw_filename + " ...\n";
+      if (!vigra::isImage(raw_filename.c_str())) {
         continue;
       }
       // read the volume
       DataVolumeType volume;
-      isbi::read_volume(volume, filename);
-      // calculate the features
-      std::cout << "Calculate features" << std::endl;
+      isbi::read_volume(volume, raw_filename);
+      // read the labelimage
       isbi::Segmentation<3> segmentation;
-      seg_calc.calculate(volume, segmentation);
-      // save the segmentation results
-      std::stringstream segmentation_result_path;
-      segmentation_result_path <<  seg_dir_str << "/"
-        << "segmentation" << isbi::zero_padding(timestep, 3) << ".h5";
-      std::cout << "Save results to " << segmentation_result_path.str()
-        << std::endl;
-      segmentation.export_hdf5(segmentation_result_path.str());
-      std::stringstream labelvolume_path;
-      labelvolume_path << seg_dir_str << "/seg" <<
-        isbi::zero_padding(timestep, 3) << ".tif";
-      std::cout << "Save results to " << labelvolume_path.str() << std::endl;
-      vigra::exportVolume(segmentation.label_image_, labelvolume_path.str());
-      labelvolume_fn_vec.push_back(labelvolume_path.str());
+      LabelVolumeType labelimage;
+      isbi::read_volume(segmentation.label_image_, seg_filename);
+      // read label count
+      isbi::LabelType min, max;
+      segmentation.label_image_.minmax(&min, &max);
+      segmentation.label_count_ = max;
       // create traxels
-      std::cout << "Extract traxels" << std::endl;
+      std::cout << "Extract traxels: " << std::flush;
       traxel_extractor.extract(
         segmentation,
         volume,
         timestep,
         traxels_current_frame);
+      std::cout << "found " << traxels_current_frame.size() << std::endl;
       // get the coordinate map
       if (!tracker_name.compare("ConsTracking")) {
         isbi::fill_coordinate_map(
@@ -231,7 +213,7 @@ int main(int argc, char** argv) {
           coordinate_map_ptr);
       }
       // extract division features if this was not the first frame
-      if(dir_itr != fn_vec.begin()) {
+      if(raw_fn_it != raw_fn_vec.begin()) {
         if(!tracker_name.compare("ConsTracking")) {
           div_feature_extractor.extract(
             traxels_last_frame,
@@ -248,7 +230,6 @@ int main(int argc, char** argv) {
           pgmlink::add(ts, t);
         }
       }
-
       current_frame = 1 - current_frame;
     }
     // add remaining traxels (after switching in "last frame") to traxelstore
@@ -256,7 +237,7 @@ int main(int argc, char** argv) {
       pgmlink::add(ts, t);
     // end of iteration over all filenames/timesteps
 
-    //isbi::print_traxelstore(std::cout, ts);
+    isbi::print_traxelstore(std::cout, ts);
 
     //=========================================================================
     // track!
@@ -274,20 +255,22 @@ int main(int argc, char** argv) {
     std::cout << lineage;
     timestep = 0;
     for (
-      std::vector<std::string>::iterator fn_it = labelvolume_fn_vec.begin();
-      fn_it != labelvolume_fn_vec.end();
+      std::vector<isbi::PathType>::iterator fn_it = seg_fn_vec.begin();
+      fn_it != seg_fn_vec.end();
       fn_it++, timestep++ )
     {
       // read the label volume
       LabelVolumeType labelvolume;
-      isbi::read_volume(labelvolume, *fn_it);
+      std::string filename(fn_it->string());
+      isbi::read_volume(labelvolume, filename);
       // relabel the label volume
       lineage.relabel<3>(labelvolume, timestep, coordinate_map_ptr);
       // save results
       std::stringstream labelvolume_path;
-      labelvolume_path << res_dir_str << "/mask" << isbi::zero_padding(timestep, 3);
+      labelvolume_path << res_dir_str << "/mask"
+        << isbi::zero_padding(timestep, 3) << ".tif";
       std::cout << "Save results to " << labelvolume_path.str() << std::endl;
-      vigra::VolumeExportInfo export_info(labelvolume_path.str().c_str(), ".tif");
+      vigra::VolumeExportInfo export_info(labelvolume_path.str().c_str());
       vigra::exportVolume(labelvolume, export_info);
     }
 
@@ -296,7 +279,7 @@ int main(int argc, char** argv) {
     std::cout << e.what();
     std::cout << argv[0] << " <volume folder> <segmentation folder>"
       << " <result_folder> <config file> <classifier file>"
-      << " <feature file> <region feature file> <division feature file>"
+      << " <region feature file> <division feature file>"
       << std::endl;
     return 0;
   } catch (std::runtime_error& e) {

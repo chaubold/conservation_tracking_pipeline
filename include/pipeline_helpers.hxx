@@ -114,6 +114,12 @@ OutputIterator copy_if_own (
   UnaryPredicate pred);
 
 
+template<typename T>
+void read_volume(T& volume, const std::string& filename);
+
+
+template<typename T>
+void read_volume(T& volume, const std::string& filename, size_t expand_z);
 /* -------------------------------------------------- */
 /*                   IMPLEMENTATION                   */
 /* -------------------------------------------------- */
@@ -133,6 +139,18 @@ OutputIterator copy_if_own(
     ++first;
   }
   return result;
+}
+
+// workaround since Destructor of VolumeImportInfo gives Segfaul:
+template<typename T>
+void read_volume(T& volume, const std::string& filename) {
+  vigra::ImageImportInfo info(filename.c_str());
+  vigra::Shape3 shape(info.shape()[0], info.shape()[1], info.numImages());
+  volume.reshape(shape);
+  for(int i = 0; i < info.numImages(); i++) {
+    info.setImageIndex(i);
+    vigra::importImage(info, volume.bindOuter(i));
+  }
 }
 
 } // namespace isbi_pipeline
