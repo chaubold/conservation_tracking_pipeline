@@ -97,7 +97,6 @@ int main(int argc, char** argv) {
     // region features if applicable
     std::vector<std::string> region_feature_list;
     isbi::RandomForestVectorType region_feature_rfs;
-    unsigned int max_object_num = 0;
     std::vector<std::string> division_feature_list;
     isbi::RandomForestVectorType division_feature_rfs;
     size_t template_size = 0;
@@ -117,8 +116,6 @@ int main(int argc, char** argv) {
         "CountClassification/ClassifierForests/Forest",
         1,
         4);
-      // get the max_object_num
-      max_object_num = options.get_option<int>("maxObj");
       if (!read_status) {
         throw std::runtime_error(
           "Set to ConsTracking but no CountClassifierForest found");
@@ -162,17 +159,16 @@ int main(int argc, char** argv) {
     // initialize vector of label images
     std::vector<std::string> labelimage_fn_vec;
     // create the feature and segmentation calculator
+    vigra::TinyVector<isbi::DataType, 2> image_scales;
+    image_scales = options.get_vector_option<isbi::DataType, 2>("scales");
     boost::shared_ptr<isbi::FeatureCalculator<2> > feature_calc_ptr(
-      new isbi::FeatureCalculator<2>(feature_list));
+      new isbi::FeatureCalculator<2>(feature_list, image_scales));
     isbi::SegmentationCalculator<2> seg_calc(feature_calc_ptr, rfs);
     // create the traxel extractor
     isbi::TraxelExtractor<2> traxel_extractor(
-      max_object_num,
       region_feature_list,
       region_feature_rfs,
-      options.get_option<int>("borderWidth"),
-      options.get_option<int>("size_range_0"),
-      options.get_option<int>("size_range_1"));
+      options);
 
     // create division feature extractor
     isbi::DivisionFeatureExtractor<2, isbi::LabelType> div_feature_extractor(template_size);

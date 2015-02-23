@@ -46,6 +46,16 @@ FeatureCalculator<N>::FeatureCalculator(
 }
 
 template<int N>
+FeatureCalculator<N>::FeatureCalculator(
+    const StringDataPairVectorType& feature_scales,
+    const vigra::TinyVector<DataType, N> image_scales,
+    DataType window_size) :
+  FeatureCalculator(feature_scales, window_size)
+{
+  conv_options_.stepSize(image_scales);
+}
+
+template<int N>
 size_t FeatureCalculator<N>::get_feature_size(
   const std::string& feature_name
 ) const {
@@ -87,7 +97,7 @@ int FeatureCalculator<N>::calculate_gaussian_smoothing(
 }
 
 template<int N>
-int FeatureCalculator<N>::calculate_laplacian_of_gaussians(
+int FeatureCalculator<N>::calculate_laplacian_of_gaussian(
   const vigra::MultiArrayView<N, DataType>& image,
   vigra::MultiArrayView<N+1, DataType>& features,
   DataType feature_scale) const
@@ -238,7 +248,7 @@ int FeatureCalculator<N>::calculate(
     if (!feature_name.compare("GaussianSmoothing")) {
       calculate_gaussian_smoothing(image, features_view, scale);
     } else if (!feature_name.compare("LaplacianOfGaussian")) {
-      calculate_laplacian_of_gaussians(image, features_view, scale);
+      calculate_laplacian_of_gaussian(image, features_view, scale);
     } else if (!feature_name.compare("GaussianGradientMagnitude")) {
       calculate_gaussian_gradient_magnitude(image, features_view, scale);
     } else if (!feature_name.compare("DifferenceOfGaussians")) {

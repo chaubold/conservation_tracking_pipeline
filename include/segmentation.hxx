@@ -33,6 +33,10 @@ class FeatureCalculator {
   FeatureCalculator(
     const StringDataPairVectorType& feature_scales,
     DataType window_size = 3.5);
+  FeatureCalculator(
+    const StringDataPairVectorType& feature_scales,
+    const vigra::TinyVector<DataType, N> image_scales,
+    DataType window_size = 3.5);
   size_t get_feature_size(const std::string& feature_name) const;
   size_t get_feature_size() const;
   int calculate(
@@ -43,7 +47,7 @@ class FeatureCalculator {
     const vigra::MultiArrayView<N, DataType>& image,
     vigra::MultiArrayView<N+1, DataType>& features,
     DataType feature_scale) const;
-  int calculate_laplacian_of_gaussians(
+  int calculate_laplacian_of_gaussian(
     const vigra::MultiArrayView<N, DataType>& image,
     vigra::MultiArrayView<N+1, DataType>& features,
     DataType feature_scale) const;

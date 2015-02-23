@@ -16,7 +16,6 @@
 
 // boost
 #include <boost/tokenizer.hpp>
-#include <boost/lexical_cast.hpp>
 
 // own
 #include "pipeline_helpers.hxx"
@@ -24,20 +23,6 @@
 namespace isbi_pipeline {
 
 namespace fs = boost::filesystem;
-
-// local typdef
-typedef StringStringMapType::const_iterator StringStringMapConstItType;
-
-// local functions
-template<typename T> bool convertible_to(const std::string& str) {
-  bool ret = true;
-  try {
-    static_cast<void>(boost::lexical_cast<T>(str));
-  } catch (const boost::bad_lexical_cast&) {
-    ret = false;
-  }
-  return ret;
-}
 
 ////
 //// ArgumentError
@@ -63,59 +48,15 @@ TrackingOptions::TrackingOptions(const std::string path) {
   file.close();
 }
 
-template<typename T>
-bool TrackingOptions::has_option(const std::string key) const {
-  StringStringMapConstItType it = options_map_.find(key);
-  if (it != options_map_.end()) {
-    return convertible_to<T>(it->second);
-  } else {
-    return false;
-  }
-}
-
-template<>
-bool TrackingOptions::has_option<std::string>(const std::string key) const {
-  return options_map_.count(key);
-}
-
-template<typename T>
-bool TrackingOptions::check_option(const std::string key) const {
-  if (has_option<T>(key)) {
-    return true;
-  } else {
-    std::cout << "Option \"" << key << "\" not legal" << std::endl;
-    return false;
-  }
-}
-
-template<typename T>
-T TrackingOptions::get_option(const std::string key) const {
-  StringStringMapConstItType it = options_map_.find(key);
-  if (it != options_map_.end()) {
-    return boost::lexical_cast<T>(it->second);
-  } else {
-    throw std::runtime_error("Option \"" + key + "\" not set");
-  }
-}
-
-template<>
-std::string TrackingOptions::get_option<std::string>(
-  const std::string key
-) const {
-  StringStringMapConstItType it = options_map_.find(key);
-  if (it != options_map_.end()) {
-    return it->second;
-  } else {
-    throw std::runtime_error("Option \"" + key + "\" not set");
-  }
-}
-
 bool TrackingOptions::is_legal() const {
   bool ret = check_option<std::string>("tracker");
   ret = ret and check_option<int>("borderWidth");
   ret = ret and check_option<int>("size_range_0");
   ret = ret and check_option<int>("size_range_1");
   ret = ret and check_option<int>("templateSize");
+  ret = ret and check_option<double>("scales_0");
+  ret = ret and check_option<double>("scales_1");
+  ret = ret and check_option<double>("scales_2");
   if (ret) {
     const std::string tracker_type = get_option<std::string>("tracker");
     // check the tracker options

@@ -17,6 +17,7 @@
 
 // boost
 #include <boost/filesystem.hpp>
+#include <boost/lexical_cast.hpp>
 
 // pgmlink
 #include <pgmlink/tracking.h>
@@ -26,6 +27,8 @@
 #include "common.h"
 
 namespace isbi_pipeline {
+
+template<typename T> bool convertible_to(const std::string value);
 
 // ArgumentError class
 class ArgumentError : public std::exception {
@@ -40,6 +43,8 @@ class TrackingOptions {
   template<typename T> bool has_option(const std::string key) const;
   template<typename T> bool check_option(const std::string key) const;
   template<typename T> T get_option(const std::string key) const;
+  template<typename T, int N>
+  vigra::TinyVector<T, N> get_vector_option(const std::string key) const;
  private:
   StringStringMapType options_map_;
 };
@@ -120,9 +125,62 @@ void read_volume(T& volume, const std::string& filename);
 
 template<typename T>
 void read_volume(T& volume, const std::string& filename, size_t expand_z);
+
 /* -------------------------------------------------- */
 /*                   IMPLEMENTATION                   */
 /* -------------------------------------------------- */
+template<typename T> bool convertible_to(const std::string str) {
+  bool ret = true;
+  try {
+    static_cast<void>(boost::lexical_cast<T>(str));
+  } catch (const boost::bad_lexical_cast& error) {
+    ret = false;
+  }
+  return ret;
+}
+
+template<typename T>
+bool TrackingOptions::has_option(const std::string key) const {
+  typedef StringStringMapType::const_iterator StringStringMapConstItType;
+  StringStringMapConstItType it = options_map_.find(key);
+  if (it != options_map_.end()) {
+    return convertible_to<T>(it->second);
+  } else {
+    return false;
+  }
+}
+
+template<typename T>
+bool TrackingOptions::check_option(const std::string key) const {
+  if (has_option<T>(key)) {
+    return true;
+  } else {
+    std::cout << "Option \"" << key << "\" not legal" << std::endl;
+    return false;
+  }
+}
+
+template<typename T>
+T TrackingOptions::get_option(const std::string key) const {
+  typedef StringStringMapType::const_iterator StringStringMapConstItType;
+  StringStringMapConstItType it = options_map_.find(key);
+  if (it != options_map_.end()) {
+    return boost::lexical_cast<T>(it->second);
+  } else {
+    throw std::runtime_error("Option \"" + key + "\" not set");
+  }
+}
+
+template<typename T, int N>
+vigra::TinyVector<T, N> TrackingOptions::get_vector_option(const std::string key) const {
+  vigra::TinyVector<T, N> ret;
+  for (int i = 0; i < N; i++) {
+    std::stringstream sstream;
+    sstream << key << "_" << i;
+    ret[i] = get_option<T>(sstream.str());
+  }
+  return ret;
+}
 
 template <class InputIterator, class OutputIterator, class UnaryPredicate>
 OutputIterator copy_if_own(

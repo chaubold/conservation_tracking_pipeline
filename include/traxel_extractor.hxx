@@ -17,6 +17,7 @@
 // own
 #include "common.h"
 #include "segmentation.hxx"
+#include "pipeline_helpers.hxx" /* for options */
 
 namespace isbi_pipeline {
 
@@ -52,12 +53,9 @@ class TraxelExtractor {
       acc::Variance >
   > AccChainType;
   TraxelExtractor(
-    unsigned int max_object_num,
     const std::vector<std::string> feature_selection,
     const RandomForestVectorType& random_forests,
-    unsigned int border_distance = 0,
-    unsigned int lower_size_lim = 0,
-    unsigned int upper_size_lim = 0);
+    const TrackingOptions& options);
   int extract(
     const Segmentation<N>& segmentation,
     const vigra::MultiArrayView<N, DataType>& image,
@@ -75,12 +73,14 @@ class TraxelExtractor {
     const size_t label_id,
     FeatureMapType& feature_map) const;
   int get_detection_probability(FeatureMapType& feature_map) const;
-  unsigned int max_object_num_;
   const std::vector<std::string> feature_selection_;
   const RandomForestVectorType& random_forests_;
+  const TrackingOptions& options_;
+  unsigned int max_object_num_;
   unsigned int border_distance_;
   unsigned int lower_size_lim_;
   unsigned int upper_size_lim_;
+  DataType x_scale_, y_scale_, z_scale_;
 };
 
 /*=============================================================================

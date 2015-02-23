@@ -109,20 +109,25 @@ void copy_vector(
 ////
 template<int N>
 TraxelExtractor<N>::TraxelExtractor(
-    unsigned int max_object_num,
     const std::vector<std::string> feature_selection,
     const RandomForestVectorType& random_forests,
-    unsigned int border_distance,
-    unsigned int lower_size_lim,
-    unsigned int upper_size_lim) :
-  max_object_num_(max_object_num),
+    const TrackingOptions& options) :
   feature_selection_(feature_selection),
   random_forests_(random_forests),
-  border_distance_(border_distance),
-  lower_size_lim_(lower_size_lim),
-  upper_size_lim_(upper_size_lim)
+  options_(options)
 {
   // assertions?
+  if (!options.get_option<std::string>("tracker").compare("ConsTracking")) {
+    max_object_num_ = options.get_option<int>("maxObj");
+  } else {
+    max_object_num_ = 1;
+  }
+  border_distance_ = options.get_option<int>("borderWidth");
+  lower_size_lim_ = options.get_option<int>("size_range_0");
+  upper_size_lim_ = options.get_option<int>("size_range_1");
+  x_scale_ = options.get_option<double>("scales_0");
+  y_scale_ = options.get_option<double>("scales_1");
+  z_scale_ = options.get_option<double>("scales_2");
 }
 
 template<int N>
@@ -226,8 +231,15 @@ int TraxelExtractor<N>::extract_for_label(
     if (random_forests_.size() > 0) {
       get_detection_probability(feature_map);
     }
+    // Its ok to use "new" since the Traxel class handles the
+    // destruction of the locator
+    typedef pgmlink::ComLocator LocatorType;
+    LocatorType* l_ptr = new LocatorType;
+    l_ptr->x_scale = x_scale_;
+    l_ptr->y_scale = y_scale_;
+    l_ptr->z_scale = z_scale_;
     // create the traxel and add it to the traxel store
-    pgmlink::Traxel traxel(label_id, timestep, feature_map);
+    pgmlink::Traxel traxel(label_id, timestep, feature_map, l_ptr);
     traxels.push_back(traxel);
   }
   return return_status;
