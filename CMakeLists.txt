@@ -52,6 +52,8 @@ INCLUDE_DIRECTORIES(
   "${PROJECT_SOURCE_DIR}/include/"
 )
 
+SET(WITH_TOOLS "False" CACHE BOOL "Build auxiliary tools for pipeline.")
+
 INCLUDE_DIRECTORIES(include ${CPLEX_INCLUDE_DIRS})
 
 # CPLEX switch to be compatible with STL
@@ -75,3 +77,8 @@ TARGET_LINK_LIBRARIES(tracking3d pipeline_helpers gomp ${PGMLINK_LIBRARIES} ${VI
 
 ADD_EXECUTABLE(test_feature_calculators test_feature_calculators.cxx)
 TARGET_LINK_LIBRARIES(test_feature_calculators pipeline_helpers ${PGMLINK_LIBRARIES} ${VIGRA_IMPEX_LIBRARY} ${Boost_LIBRARIES})
+
+IF(WITH_TOOLS)
+  ADD_EXECUTABLE(expand_z_scale tools/expand_z_scale.cxx)
+  TARGET_LINK_LIBRARIES(expand_z_scale pipeline_helpers ${PGMLINK_LIBRARIES} ${VIGRA_IMPEX_LIBRARY} ${Boost_LIBRARIES})
+ENDIF(WITH_TOOLS)
