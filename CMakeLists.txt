@@ -61,7 +61,7 @@ ADD_DEFINITIONS(-DIL_STD)
 # add flags for vigra, otherwise we would get name conflicts
 ADD_DEFINITIONS(-DWITH_LEMON -DWITH_BOOST_GRAPH)
 
-ADD_LIBRARY(pipeline_helpers STATIC src/pipeline_helpers.cxx src/segmentation.cxx src/traxel_extractor.cxx src/lineage.cxx src/division_feature_extractor.cxx)
+ADD_LIBRARY(pipeline_helpers SHARED src/pipeline_helpers.cxx src/segmentation.cxx src/traxel_extractor.cxx src/lineage.cxx src/division_feature_extractor.cxx)
 
 ADD_EXECUTABLE(isbi_pipeline main.cxx)
 TARGET_LINK_LIBRARIES(isbi_pipeline pipeline_helpers gomp ${PGMLINK_LIBRARIES} ${VIGRA_IMPEX_LIBRARY} ${Boost_LIBRARIES} ${HDF5_LIBRARIES} ${CPLEX_LIBRARIES})
