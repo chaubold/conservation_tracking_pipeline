@@ -105,7 +105,6 @@ int main(int argc, char** argv) {
         region_feature_rfs,
         classifier_file_path,
         "CountClassification/ClassifierForests/Forest",
-        1,
         4);
       if (!read_status) {
         throw std::runtime_error(
@@ -124,7 +123,6 @@ int main(int argc, char** argv) {
         division_feature_rfs,
         classifier_file_path,
         "DivisionDetection/ClassifierForests/Forest",
-        1,
         4);
       if (!read_status) {
         throw std::runtime_error(

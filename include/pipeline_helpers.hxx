@@ -78,7 +78,6 @@ bool get_rfs_from_file(
   RandomForestVectorType& rfs,
   std::string fn,
   std::string path_in_file = "PixelClassification/ClassifierForests/Forest",
-  int n_forests = 10,
   int n_leading_zeros = 4);
 
 
