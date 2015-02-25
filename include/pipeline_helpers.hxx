@@ -38,7 +38,9 @@ public:
 
 class TrackingOptions {
  public:
+  TrackingOptions() {};
   TrackingOptions(const std::string path);
+  void load(const std::string path);
   bool is_legal() const;
   template<typename T> bool has_option(const std::string key) const;
   template<typename T> bool check_option(const std::string key) const;
@@ -100,6 +102,7 @@ bool contains_substring_boost_path(
 
 // check if a directory exists
 void check_directory(const PathType& path, bool create_if_not = false);
+void check_file(const PathType& path);
 
 
 // get files in a path
@@ -107,6 +110,12 @@ std::vector<PathType> get_files(
   const PathType& path,
   const std::string extension_filter,
   bool sort = false);
+
+std::vector<PathType> create_filenames(
+  const PathType& path,
+  const std::string mask,
+  size_t size,
+  size_t offset = 0);
 
 
 // copy_if_own because not using c++11

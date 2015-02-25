@@ -31,13 +31,18 @@ namespace fs = boost::filesystem;
 //// ArgumentError
 ////
 const char* ArgumentError::what() const throw() {
-  return "Dataset folder and seqeunce not specified!\n";
+  return "wrong number of arguments";
 }
 
 ////
 //// class TrackingOptions
 ////
 TrackingOptions::TrackingOptions(const std::string path) {
+  options_map_.clear();
+  load(path);
+}
+
+void TrackingOptions::load(const std::string path) {
   std::ifstream file(path.c_str());
   if (!file.is_open()) {
     std::runtime_error("Could not open file \"" + path + "\"");
@@ -393,6 +398,14 @@ void check_directory(const PathType& path, bool create_if_not) {
   }
 }
 
+void check_file(const PathType& path) {
+  if (!fs::exists(path)) {
+    throw std::runtime_error(path.string() + " does not exist");
+  } else if (fs::is_directory(path)) {
+    throw std::runtime_error(path.string() + " is a directory");
+  }
+}
+
 std::vector<PathType> get_files(
   const PathType& path,
   const std::string extension_filter,
@@ -407,6 +420,35 @@ std::vector<PathType> get_files(
   }
   if (sort) {
     std::sort(ret.begin(), ret.end());
+  }
+  return ret;
+}
+
+std::vector<PathType> create_filenames(
+  const PathType& path,
+  const std::string mask,
+  size_t size,
+  size_t offset)
+{
+  std::vector<PathType> ret;
+  for (size_t n = 0; n < size; n++) {
+    size_t last_digit = n % 10;
+    size_t divided    = n / 10;
+    std::string path_str = mask;
+    size_t found_index = path_str.find_last_of('#');
+    while (found_index != std::string::npos) {
+      // replace '#' with the digit
+      path_str[found_index] = std::to_string(last_digit)[0];
+      // find the next '#'
+      found_index = path_str.find_last_of('#');
+      // get the next digit
+      last_digit = divided % 10;
+      divided    = divided / 10;
+    }
+    // compose the path
+    path_str = path.string() + "/" + path_str;
+    // create a new PathType object at the back of the return vector
+    ret.emplace_back(path_str);
   }
   return ret;
 }
