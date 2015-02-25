@@ -86,6 +86,9 @@ TARGET_LINK_LIBRARIES(tracking3d pipeline_helpers gomp ${PGMLINK_LIBRARIES} ${VI
 ADD_EXECUTABLE(test_feature_calculators test_feature_calculators.cxx)
 TARGET_LINK_LIBRARIES(test_feature_calculators pipeline_helpers ${PGMLINK_LIBRARIES} ${VIGRA_IMPEX_LIBRARY} ${Boost_LIBRARIES})
 
+ADD_EXECUTABLE(test_mask_traxels test_mask_traxels.cxx)
+TARGET_LINK_LIBRARIES(test_mask_traxels pipeline_helpers ${PGMLINK_LIBRARIES} ${VIGRA_IMPEX_LIBRARY} ${Boost_LIBRARIES})
+
 IF(WITH_TOOLS)
   ADD_EXECUTABLE(expand_z_scale tools/expand_z_scale.cxx)
   TARGET_LINK_LIBRARIES(expand_z_scale pipeline_helpers ${PGMLINK_LIBRARIES} ${VIGRA_IMPEX_LIBRARY} ${Boost_LIBRARIES})

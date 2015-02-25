@@ -187,22 +187,6 @@ namespace features{
 } // namespace features
 } // namespace pgmlink
 
-template<int N, class DataType>
-std::set<DataType> find_unique_labels_in_roi(vigra::MultiArrayView<N, DataType> roi, bool ignore_label_zero = true)
-{
-	typedef std::set<DataType> SetType;
-	SetType labels(roi.begin(), roi.end());
-
-	if(ignore_label_zero)
-	{
-		typename SetType::iterator it = std::find(labels.begin(), labels.end(), 0);
-		if(it != labels.end())
-			labels.erase(it);
-	}
-
-	return std::move(labels);
-}
-
 std::ostream& operator<<(std::ostream& lhs, const pgmlink::feature_array& rhs)
 {
 	if(rhs.size() == 0)
