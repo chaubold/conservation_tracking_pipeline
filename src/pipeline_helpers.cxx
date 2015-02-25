@@ -255,7 +255,8 @@ bool get_rfs_from_file(
 EventVectorVectorType track(
   TraxelStoreType& ts,
   const TrackingOptions& options,
-  const CoordinateMapPtrType& coordinate_map_ptr)
+  const CoordinateMapPtrType& coordinate_map_ptr,
+  const std::vector<pgmlink::Traxel>& traxels_to_keep_in_first_frame)
 {
   const std::string& tracker_type = options.get_option<std::string>("tracker");
   // create the ChaingraphTracking or ConsTracking class and call the ()-
@@ -303,16 +304,14 @@ EventVectorVectorType track(
       field_of_view,
       "none"); // event_vector_dump_filename
 
-    // std::cout << "Creating ConsTracking with parameters:" << std::endl;
-    // std::cout << "\tmaxObj: " << options.get_option<int   >("maxObj") << std::endl;
-    // std::cout << "\tsizeDependent: " << options.get_option<bool  >("sizeDependent") << std::endl;
-    // std::cout << "\tavgSize: " << options.get_option<double>("avgSize") << std::endl;
-    // std::cout << "\tmaxDist: " << options.get_option<double>("maxDist") << std::endl;
-    // std::cout << "\twithDivisions: " << options.get_option<bool  >("withDivisions") << std::endl;
-    // std::cout << "\tdivThreshold: " << options.get_option<double>("divThreshold") << std::endl;
-
     // build the hypotheses graph
     tracker.build_hypo_graph(ts);
+
+    // filter nodes in first frame from hypotheses graph
+    if(traxels_to_keep_in_first_frame.size() > 0) {
+        tracker.prune_to_traxel_descendants(traxels_to_keep_in_first_frame);
+    }
+
     // track
     boost::shared_ptr<EventVectorVectorType> ret_ptr(
       new EventVectorVectorType(tracker.track(
@@ -328,20 +327,6 @@ EventVectorVectorType track(
         options.get_option<double>("borderAwareWidth"),
         options.get_option<bool  >("withConstraints"),
         options.get_option<double>("cplex_timeout"))));
-
-    // std::cout << "\n\nCalling tracking with parameters:" << std::endl;
-    // std::cout << "\tforbiddenCost: " << options.get_option<double>("forbiddenCost") << std::endl;
-    // std::cout << "\tepGap: " << options.get_option<double>("epGap") << std::endl;
-    // std::cout << "\twithTracklets: " << options.get_option<bool  >("withTracklets") << std::endl;
-    // std::cout << "\tdivWeight: " << options.get_option<double>("divWeight") << std::endl;
-    // std::cout << "\ttransWeight: " << options.get_option<double>("transWeight") << std::endl;
-    // std::cout << "\tdisappearanceCost: " << options.get_option<double>("disappearanceCost") << std::endl;
-    // std::cout << "\tappearanceCost: " << options.get_option<double>("appearanceCost") << std::endl;
-    // std::cout << "\tnDim: " << options.get_option<int   >("nDim") << std::endl;
-    // std::cout << "\ttransParameter: " << options.get_option<double>("transParameter") << std::endl;
-    // std::cout << "\tborderAwareWidth: " << options.get_option<double>("borderAwareWidth") << std::endl;
-    // std::cout << "\twithConstraints: " << options.get_option<bool  >("withConstraints") << std::endl;
-    // std::cout << "\tcplex_timeout: " << options.get_option<double>("cplex_timeout") << std::endl;
 
     // merger resolving
     return tracker.resolve_mergers(

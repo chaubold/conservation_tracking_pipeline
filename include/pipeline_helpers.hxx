@@ -87,7 +87,8 @@ bool get_rfs_from_file(
 EventVectorVectorType track(
   TraxelStoreType& ts,
   const TrackingOptions& options,
-  const CoordinateMapPtrType& coordinate_map_ptr = CoordinateMapPtrType());
+  const CoordinateMapPtrType& coordinate_map_ptr = CoordinateMapPtrType(),
+  const std::vector<pgmlink::Traxel>& traxels_to_keep_in_first_frame = {});
 
 
 // helper function to iterate over tif only

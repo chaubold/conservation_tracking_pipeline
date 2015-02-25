@@ -44,6 +44,9 @@ public:
 						const std::vector<std::string>& feature_selection,
 						const RandomForestVectorType& random_forests);
 
+  static std::set<LabelType> find_unique_labels_in_roi(vigra::MultiArrayView<N, LabelType> roi,
+                         bool ignore_label_zero = true);
+
 private:
 	pgmlink::feature_array parent_children_ratio_operation(const pgmlink::feature_array& a,
 														   const pgmlink::feature_array& b,
@@ -52,9 +55,6 @@ private:
 	pgmlink::feature_array parent_children_angle_operation(const pgmlink::feature_array& a,
 														   const pgmlink::feature_array& b,
 														   const pgmlink::feature_array& c);
-
-	std::set<LabelType> find_unique_labels_in_roi(vigra::MultiArrayView<N, LabelType> roi,
-												 bool ignore_label_zero = true);
 
 	void compute_traxel_division_features(pgmlink::Traxel& t,
 											std::vector<TraxelWithDistance>& nearest_neighbors,

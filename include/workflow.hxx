@@ -8,6 +8,8 @@
 #define ISBI_WORKFLOW_HXX
 // stl
 #include <stdexcept>
+#include <set>
+#include <algorithm>
 
 // boost
 #include <boost/filesystem.hpp>
@@ -16,6 +18,7 @@
 // vigra
 #include <vigra/impex.hxx>
 #include <vigra/multi_array.hxx>
+#include <vigra/multi_math.hxx>
 
 // pgmlink
 #include <pgmlink/tracking.h>
@@ -55,7 +58,10 @@ class Workflow {
   Workflow(bool calculate_segmentation);
   void init(int argc, char* argv[]);
   template<int N> Lineage run();
- private:
+  template<int N> void extract_masked_traxels(
+      const vigra::MultiArray<N, LabelType> &segmentation,
+      const TraxelVectorType& traxels);
+private:
   bool calculate_segmentation_;
   int num_args_;
   TrackingOptions options_;
@@ -71,6 +77,10 @@ class Workflow {
   std::vector<PathType> seg_path_vec_;
   std::vector<PathType> res_path_vec_;
   PathType res_path_; // for lineage
+  // first frame masking:
+  bool has_mask_image_;
+  PathType mask_image_file_;
+  std::vector<pgmlink::Traxel> traxels_to_keep_;
 };
 
 /*=============================================================================
@@ -177,6 +187,9 @@ Lineage Workflow::run() {
       for(pgmlink::Traxel& t : traxels_prev_frame) {
         pgmlink::add(ts, t);
       }
+    } else if(has_mask_image_) {
+      // for the first frame, if a mask image was specified, get the set of marked traxels
+      extract_masked_traxels<N>(segmentation.label_image_, traxels_curr_frame);
     }
   }
   // add the remaining traxels from the last frame
@@ -186,7 +199,7 @@ Lineage Workflow::run() {
   /*=========================
     tracking
   =========================*/
-  EventVectorVectorType events = track(ts, options_, coordinate_map_ptr);
+  EventVectorVectorType events = track(ts, options_, coordinate_map_ptr, traxels_to_keep_);
   Lineage lineage(events);
   /*=========================
     relabeling
@@ -217,6 +230,40 @@ Lineage Workflow::run() {
     throw std::runtime_error("cannot open " + res_path_.string());
   }
   return lineage;
+}
+
+template<int N>
+void Workflow::extract_masked_traxels(
+    const vigra::MultiArray<N, LabelType>& segmentation,
+    const TraxelVectorType& traxels
+)
+{
+  using namespace vigra::multi_math;
+  vigra::MultiArray<N, LabelType> mask_image;
+  load_multi_array<N>(mask_image, mask_image_file_);
+  // make mask image binary, background has label 0!
+  mask_image = signi(mask_image);
+  // extract part of segmentation that has been masked
+  mask_image = segmentation * mask_image;
+  // find which labels are present
+  std::set<LabelType> masked_labels_in_first_frame =
+      DivisionFeatureExtractor<N, LabelType>::find_unique_labels_in_roi(mask_image);
+  // find corresponding traxels
+  for (LabelType label : masked_labels_in_first_frame)
+  {
+    auto compare_predicate = [=](const pgmlink::Traxel& t) -> bool {
+      return t.Timestep == 0 && t.Id == label;
+    };
+    TraxelVectorType::const_iterator traxel_it = std::find_if(traxels.begin(), traxels.end(), compare_predicate);
+    if (traxel_it != traxels.end()) {
+      traxels_to_keep_.push_back(*traxel_it);
+    }
+    else {
+      throw std::runtime_error("Could not find traxel for selected label");
+    }
+  }
+
+  std::cout << "Mask selected " << masked_labels_in_first_frame.size() << " traxels in first frame for tracking." << std::endl;
 }
 
 }

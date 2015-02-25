@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
     std::cout << "usage:" << std::endl;
     std::cout << argv[0] << " <image folder> <segmentation folder>"
       << " <result_folder> <config file> <classifier file>"
-      << " <region feature file> <division feature file>"
+      << " <region feature file> <division feature file> <optional:first frame traxel filter mask>"
       << std::endl;
     return 0;
   } catch (std::runtime_error& e) {
