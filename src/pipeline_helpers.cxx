@@ -310,6 +310,7 @@ EventVectorVectorType track(
     // filter nodes in first frame from hypotheses graph
     if(traxels_to_keep_in_first_frame.size() > 0) {
         tracker.prune_to_traxel_descendants(traxels_to_keep_in_first_frame);
+        tracker.enable_appearance(false);
     }
 
     // track
