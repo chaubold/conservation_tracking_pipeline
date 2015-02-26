@@ -68,6 +68,9 @@ if __name__ == "__main__":
 		with open(args.out_path + '/division_features.txt', 'w') as out_f:
 			writeSelectedRegionFeatures(out_f, in_f['DivisionDetection/SelectedFeatures'])
 
+		threshold_level = in_f['ThresholdTwoLevels/SingleThreshold'].value
+		threshold_channel = in_f['ThresholdTwoLevels/Channel'].value
+
 		with open(args.out_path + '/tracking_config.txt', 'w') as out_f:
 			params = in_f['ConservationTracking/Parameters/0']
 			out_f.write('tracker,ConsTracking\n')
@@ -77,6 +80,8 @@ if __name__ == "__main__":
 			out_f.write('templateSize,50\n')
 			out_f.write('transParameter,5\n')
 			out_f.write('withConstraints,1\n')
+			out_f.write('Channel,{}\n'.format(threshold_channel))
+			out_f.write('SingleThreshold,{}\n'.format(threshold_level))
 			if params['z_range'][1] - params['z_range'][0] == 1:
 				out_f.write('nDim,2\n')
 			else:
