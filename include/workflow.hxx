@@ -33,6 +33,8 @@
 
 namespace isbi_pipeline {
 
+namespace fs = boost::filesystem;
+
 template<int N>
 void load_multi_array(
   vigra::MultiArray<N, LabelType>& multi_array,
@@ -55,7 +57,7 @@ void save_multi_array(
 
 class Workflow {
  public:
-  Workflow(bool calculate_segmentation);
+  Workflow(bool calculate_segmentation, bool segmentation_dump = false);
   void init(int argc, char* argv[]);
   template<int N> Lineage run();
   template<int N> void extract_masked_traxels(
@@ -63,6 +65,7 @@ class Workflow {
       const TraxelVectorType& traxels);
 private:
   bool calculate_segmentation_;
+  bool segmentation_dump_;
   int num_args_;
   TrackingOptions options_;
   // classifier config variables
@@ -150,6 +153,11 @@ Lineage Workflow::run() {
       segmentation_calc_ptr->calculate(raw_image, segmentation);
       // save the segmentation
       save_multi_array<N>(segmentation.label_image_, *seg_path_it);
+      // save the segmentation as a hdf5
+      if (segmentation_dump_) {
+        PathType h5_seg_path = fs::change_extension(*seg_path_it, ".h5");
+        segmentation.export_hdf5(h5_seg_path.string());
+      }
     } else {
       // load the segmentation from a file
       std::cout << "load labels from " << seg_path_it->string() << std::endl;

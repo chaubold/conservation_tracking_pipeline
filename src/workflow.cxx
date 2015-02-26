@@ -121,8 +121,9 @@ void load_features(
   }
 }
 
-Workflow::Workflow(bool calculate_segmentation) :
+Workflow::Workflow(bool calculate_segmentation, bool segmentation_dump) :
   calculate_segmentation_(calculate_segmentation),
+  segmentation_dump_(segmentation_dump),
   has_mask_image_(false)
 {
   if (calculate_segmentation_) {
@@ -150,10 +151,10 @@ void Workflow::init(int argc, char* argv[]) {
   }
   PathType cnt_feature_file = fs::system_complete(argv[arg_index]); arg_index++;
   PathType div_feature_file = fs::system_complete(argv[arg_index]); arg_index++;
-  if (argc > arg_index) {
-      has_mask_image_ = true;
-      mask_image_file_ = fs::system_complete(argv[arg_index]); arg_index++;
-      std::cout << "Found Mask image option: " << mask_image_file_.string() << std::endl;
+  if (static_cast<size_t>(argc) > arg_index) {
+    has_mask_image_ = true;
+    mask_image_file_ = fs::system_complete(argv[arg_index]); arg_index++;
+    std::cout << "Found Mask image option: " << mask_image_file_.string() << std::endl;
   }
   // check directories
   check_directory(raw_dir, false);
