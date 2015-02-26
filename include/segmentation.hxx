@@ -16,6 +16,7 @@
 
 // own
 #include "common.h"
+#include "pipeline_helpers.hxx"
 
 namespace isbi_pipeline {
 
@@ -94,13 +95,15 @@ class SegmentationCalculator {
  public:
   SegmentationCalculator(
     boost::shared_ptr<FeatureCalculator<N> > feature_calculator_ptr,
-    const RandomForestVectorType& random_forests);
+    const RandomForestVectorType& random_forests,
+    const TrackingOptions& options);
   int calculate(
     const vigra::MultiArray<N, DataType>& image,
     Segmentation<N>& segmentation) const;
  private:
   boost::shared_ptr<FeatureCalculator<N> > feature_calculator_ptr_;
   const RandomForestVectorType random_forests_;
+  const TrackingOptions& options_;
 };
 
 /*=============================================================================

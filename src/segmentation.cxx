@@ -335,9 +335,11 @@ template class Segmentation<3>;
 template<int N>
 SegmentationCalculator<N>::SegmentationCalculator(
     boost::shared_ptr<FeatureCalculator<N> > feature_calculator_ptr,
-    const std::vector<RandomForestType>& random_forests) :
+    const std::vector<RandomForestType>& random_forests,
+    const TrackingOptions& options) :
   feature_calculator_ptr_(feature_calculator_ptr),
-  random_forests_(random_forests)
+  random_forests_(random_forests),
+  options_(options)
 {
   // assertions?
 }
@@ -348,6 +350,8 @@ int SegmentationCalculator<N>::calculate(
   Segmentation<N>& segmentation) const
 {
   int return_status = 0;
+  int channel_index = options_.get_option<int>("Channel");
+  DataType prob_threshold = options_.get_option<DataType>("SingleThreshold");
   // initialize the segmentation
   segmentation.initialize(image);
   // calculate the features and reshape them
@@ -383,10 +387,11 @@ int SegmentationCalculator<N>::calculate(
   }
 
   // assign the labels
+  prob_threshold = prob_threshold * random_forests_.size();
   typename vigra::MultiArrayView<N, LabelType>::iterator seg_it;
   seg_it = segmentation.segmentation_image_.begin();
   for (size_t n = 0; n < pixel_count; n++, seg_it++) {
-    if (prediction_map_view(n, 1) > prediction_map_view(n, 0)) {
+    if (prediction_map_view(n, channel_index) > prob_threshold) {
       *seg_it = 1;
     } else {
       *seg_it = 0;

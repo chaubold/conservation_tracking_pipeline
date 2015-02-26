@@ -108,7 +108,7 @@ Lineage Workflow::run() {
       new FeatureCalculator<N>(pix_feature_list_, image_scales));
     // assign an instance to the segmentation calculator pointer
     segmentation_calc_ptr = boost::make_shared<SegmentationCalculator<N> >(
-      feature_calc_ptr, pix_feature_rfs_);
+      feature_calc_ptr, pix_feature_rfs_, options_);
   }
   // initialize the traxel extractor
   TraxelExtractor<N> traxel_extractor(

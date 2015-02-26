@@ -65,6 +65,8 @@ bool TrackingOptions::is_legal() const {
   ret = ret and check_option<double>("scales_0");
   ret = ret and check_option<double>("scales_1");
   ret = ret and check_option<double>("scales_2");
+  ret = ret and check_option<int>   ("Channel");
+  ret = ret and check_option<double>("SingleThreshold");
   if (ret) {
     const std::string tracker_type = get_option<std::string>("tracker");
     // check the tracker options
