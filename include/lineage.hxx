@@ -29,6 +29,11 @@ class Lineage {
     const int timestep,
     const CoordinateMapPtrType coordinate_map_ptr
       = CoordinateMapPtrType()) const;
+  template<int N>
+  void restrict_to_bounding_box(
+    const vigra::TinyVector<LabelType, N>& coord_min,
+    const vigra::TinyVector<LabelType, N>& coord_max,
+    const TraxelStoreType& traxelstore);
  private:
   void handle_event(const pgmlink::Event& event, const int timestep);
   void handle_appearance(const pgmlink::Event& event, const int timestep);
@@ -39,6 +44,10 @@ class Lineage {
   void start_track(
     const TraxelIndexType& traxel_index,
     const LabelType parent_track_index = 0);
+  // call clean_up() after remove(), otherwise there are inconsistencies within
+  // a Lineage object
+  void remove(const TraxelIndexType& traxel_index);
+  void clean_up();
 
   LabelType track_count_;
   static const LabelType track_index_offset_ = 1;
@@ -83,6 +92,39 @@ void Lineage::relabel(
   }
 }
 
+template<int N>
+void Lineage::restrict_to_bounding_box(
+  const vigra::TinyVector<LabelType, N>& coord_min,
+  const vigra::TinyVector<LabelType, N>& coord_max,
+  const TraxelStoreType& traxelstore)
+{
+  for(
+    TraxelStoreType::iterator t_it = traxelstore.begin();
+    t_it != traxelstore.end();
+    t_it++)
+  {
+    const FeatureMapType& feature_map = t_it->features;
+    FeatureMapType::const_iterator f_min_it = feature_map.find("CoordMin");
+    FeatureMapType::const_iterator f_max_it = feature_map.find("CoordMax");
+    if ((f_min_it == feature_map.end()) or (f_max_it == feature_map.end())) {
+      throw std::runtime_error(
+        "cannot find \"CoordMin\" and \"CoordMax\" in feature map");
+    }
+    const FeatureArrayType& coord_min_trax = f_min_it->second;
+    const FeatureArrayType& coord_max_trax = f_max_it->second;
+    bool in_bb = true;
+    for(size_t n = 0; n < N; n++) {
+      in_bb = in_bb and (coord_max_trax[n] >= coord_min[n]);
+      in_bb = in_bb and (coord_min_trax[n] <= coord_max[n]);
+    }
+    if(!in_bb) {
+      // remove traxel and all dependent variables from lineage class
+      TraxelIndexType traxel_index(t_it->Timestep, t_it->Id);
+      remove(traxel_index);
+    }
+  }
+  clean_up();
+}
 
 } // namespace isbi_pipeline
 

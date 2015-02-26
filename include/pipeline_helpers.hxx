@@ -51,6 +51,12 @@ class TrackingOptions {
   StringStringMapType options_map_;
 };
 
+template<int N>
+void get_bounding_box(
+  const TrackingOptions& options,
+  vigra::TinyVector<LabelType, N>& bb_min,
+  vigra::TinyVector<LabelType, N>& bb_max);
+
 
 // for logging of the traxelstore
 void print_traxelstore(std::ostream& stream, const TraxelStoreType& ts);

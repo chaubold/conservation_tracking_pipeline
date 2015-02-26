@@ -121,6 +121,34 @@ bool TrackingOptions::is_legal() const {
   return ret;
 }
 
+template<>
+void get_bounding_box<2>(
+  const TrackingOptions& options,
+  vigra::TinyVector<LabelType, 2>& bb_min,
+  vigra::TinyVector<LabelType, 2>& bb_max)
+{
+  LabelType border_width = options.get_option<LabelType>("borderWidth");
+  bb_min[0] = options.get_option<LabelType>("x_range_0") + border_width;
+  bb_min[1] = options.get_option<LabelType>("y_range_0") + border_width;
+  bb_max[0] = options.get_option<LabelType>("x_range_1") - border_width;
+  bb_max[1] = options.get_option<LabelType>("y_range_1") - border_width;
+}
+
+template<>
+void get_bounding_box<3>(
+  const TrackingOptions& options,
+  vigra::TinyVector<LabelType, 3>& bb_min,
+  vigra::TinyVector<LabelType, 3>& bb_max)
+{
+  LabelType border_width = options.get_option<LabelType>("borderWidth");
+  bb_min[0] = options.get_option<LabelType>("x_range_0") + border_width;
+  bb_min[1] = options.get_option<LabelType>("y_range_0") + border_width;
+  bb_min[2] = options.get_option<LabelType>("z_range_0") + border_width;
+  bb_max[0] = options.get_option<LabelType>("x_range_1") - border_width;
+  bb_max[1] = options.get_option<LabelType>("y_range_1") - border_width;
+  bb_max[2] = options.get_option<LabelType>("z_range_1") - border_width;
+}
+
 
 template<typename T>
 void print_vector(std::ostream& stream, const std::vector<T>& vec) {

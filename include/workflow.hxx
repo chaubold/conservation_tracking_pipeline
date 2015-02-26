@@ -209,6 +209,12 @@ Lineage Workflow::run() {
   =========================*/
   EventVectorVectorType events = track(ts, options_, coordinate_map_ptr, traxels_to_keep_);
   Lineage lineage(events);
+  /*========================
+    filter events
+  ========================*/
+  vigra::TinyVector<LabelType, N> bb_min, bb_max;
+  get_bounding_box<N>(options_, bb_min, bb_max);
+  lineage.restrict_to_bounding_box<N>(bb_min, bb_max, ts);
   /*=========================
     relabeling
   =========================*/
