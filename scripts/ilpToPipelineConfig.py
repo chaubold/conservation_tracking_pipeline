@@ -80,6 +80,7 @@ if __name__ == "__main__":
 			out_f.write('templateSize,50\n')
 			out_f.write('transParameter,5\n')
 			out_f.write('withConstraints,1\n')
+			out_f.write('detWeight,10.0\n')
 			out_f.write('Channel,{}\n'.format(threshold_channel))
 			out_f.write('SingleThreshold,{}\n'.format(threshold_level))
 			if params['z_range'][1] - params['z_range'][0] == 1:
