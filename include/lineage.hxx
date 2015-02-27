@@ -21,8 +21,6 @@ namespace isbi_pipeline {
 class Lineage {
  public:
   Lineage(const EventVectorVectorType& events);
-  TraxelIndexVectorType get_traxel_ids(const LabelType track_index) const;
-  LabelType get_track_id(const TraxelIndexType traxel_index) const;
   template<int N>
   void relabel(
     vigra::MultiArrayView<N, LabelType>& label_image,
@@ -34,6 +32,7 @@ class Lineage {
     const vigra::TinyVector<LabelType, N>& coord_min,
     const vigra::TinyVector<LabelType, N>& coord_max,
     const TraxelStoreType& traxelstore);
+  void restrict_to_traxel_descendants(const TraxelVectorType traxels);
  private:
   void handle_event(const pgmlink::Event& event, const int timestep);
   void handle_appearance(const pgmlink::Event& event, const int timestep);
@@ -44,6 +43,8 @@ class Lineage {
   void start_track(
     const TraxelIndexType& traxel_index,
     const LabelType parent_track_index = 0);
+  std::vector<LabelType> find_children_tracks(
+    const LabelType track) const;
   // call clean_up() after remove(), otherwise there are inconsistencies within
   // a Lineage object
   void remove(const TraxelIndexType& traxel_index);

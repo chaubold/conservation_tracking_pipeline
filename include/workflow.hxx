@@ -207,14 +207,19 @@ Lineage Workflow::run() {
   /*=========================
     tracking
   =========================*/
-  EventVectorVectorType events = track(ts, options_, coordinate_map_ptr, traxels_to_keep_);
+  EventVectorVectorType events = track(ts, options_, coordinate_map_ptr);
   Lineage lineage(events);
   /*========================
     filter events
   ========================*/
+  // filter to bounding box
   vigra::TinyVector<LabelType, N> bb_min, bb_max;
   get_bounding_box<N>(options_, bb_min, bb_max);
   lineage.restrict_to_bounding_box<N>(bb_min, bb_max, ts);
+  // filter with traxels_to_keep_
+  if (traxels_to_keep_.size() != 0) {
+    lineage.restrict_to_traxel_descendants(traxels_to_keep_);
+  }
   /*=========================
     relabeling
   =========================*/
