@@ -313,6 +313,15 @@ EventVectorVectorType track(
       false); // alternative builder
     return tracker(ts);
   } else if (!tracker_type.compare("ConsTracking")) {
+    if (traxels_to_keep_in_first_frame.size() > 0 
+        && options.get_option<double>("time_range_0") > 0) {
+      throw std::runtime_error(
+        "Node filtering only allowed if starting tracking at first frame");
+    }
+
+    std::cout << "Track frames " << options.get_option<double>("time_range_0") 
+              << " to " << options.get_option<double>("time_range_1") << std::endl;
+
     // create the field of view
     pgmlink::FieldOfView field_of_view(
       options.get_option<double>("time_range_0"),

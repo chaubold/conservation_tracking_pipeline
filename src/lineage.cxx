@@ -8,8 +8,10 @@ namespace isbi_pipeline {
 ////
 //// class Lineage
 ////
-Lineage::Lineage(const EventVectorVectorType& events) {
-  track_count_ = 0;
+Lineage::Lineage(const EventVectorVectorType& events, size_t timeframe_offset):
+    track_count_(0),
+    timeframe_offset_(timeframe_offset)
+{
   for (int timestep = 0; timestep < int(events.size()); timestep++) {
     // std::cout << "Timestep " << timestep << std::endl;
     for (
@@ -211,8 +213,9 @@ std::ostream& operator<<(std::ostream& s, const Lineage& lineage) {
     if (parent_track_it == lineage.track_track_parent_map_.end()) {
       throw std::runtime_error("Parent track id does not exist");
     }
-    sstream << it->first << " " << e_timestep << " " << l_timestep
-      << " " << parent_track_it->second << std::endl;
+    sstream << it->first << " " << e_timestep + lineage.timeframe_offset_
+            << " " << l_timestep + lineage.timeframe_offset_
+            << " " << parent_track_it->second << std::endl;
   }
   return s << sstream.str();
 }

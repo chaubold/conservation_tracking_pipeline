@@ -20,7 +20,7 @@ namespace isbi_pipeline {
 
 class Lineage {
  public:
-  Lineage(const EventVectorVectorType& events);
+  Lineage(const EventVectorVectorType& events, size_t timeframe_offset = 0);
   TraxelIndexVectorType get_traxel_ids(const LabelType track_index) const;
   LabelType get_track_id(const TraxelIndexType traxel_index) const;
   template<int N>
@@ -50,6 +50,7 @@ class Lineage {
   void clean_up();
 
   LabelType track_count_;
+  size_t timeframe_offset_;
   static const LabelType track_index_offset_ = 1;
   TraxelTrackIndexMapType traxel_track_map_;
   TrackTraxelIndexMapType track_traxel_map_;

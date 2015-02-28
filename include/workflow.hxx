@@ -166,7 +166,13 @@ Lineage Workflow::run() {
       segmentation.label_image_.minmax(&min, &max);
       segmentation.label_count_ = max;
     }
-    // extract the traxel
+    // extract the traxel if this frame is within the range to be tracked:
+    if (timestep < options_.get_option<size_t>("time_range_0")
+        || timestep > options_.get_option<size_t>("time_range_1")) {
+      traxels_curr_frame.clear();
+      continue;
+    }
+
     std::cout << "extract traxel" << std::endl;
     traxel_extractor.extract(
       segmentation,
@@ -208,7 +214,7 @@ Lineage Workflow::run() {
     tracking
   =========================*/
   EventVectorVectorType events = track(ts, options_, coordinate_map_ptr, traxels_to_keep_);
-  Lineage lineage(events);
+  Lineage lineage(events, options_.get_option<size_t>("time_range_0"));
   /*========================
     filter events
   ========================*/
@@ -225,6 +231,11 @@ Lineage Workflow::run() {
     seg_path_it != seg_path_vec_.end();
     seg_path_it++, res_path_it++, timestep++)
   {
+    if (timestep < options_.get_option<size_t>("time_range_0")
+        || timestep > options_.get_option<size_t>("time_range_1")) {
+      continue;
+    }
+
     // read the label image
     vigra::MultiArray<N, LabelType> label_image;
     load_multi_array<N>(label_image, *seg_path_it);
