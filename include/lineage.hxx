@@ -70,12 +70,12 @@ void Lineage::relabel(
   if (coordinate_map_ptr) {
     for(auto it = resolved_map_.begin(); it != resolved_map_.end(); it++) {
       const TraxelIndexType& traxel_index = it->first;
-      if (traxel_index.first == timestep) {
+      if (traxel_index.first + timeframe_offset_ == timestep) {
         for (TraxelIndexType new_index : it->second) {
           pgmlink::update_labelimage<N, LabelType>(
             coordinate_map_ptr,
             label_image,
-            new_index.first,
+            new_index.first + timeframe_offset_,
             new_index.second);
         }
       }
@@ -84,11 +84,16 @@ void Lineage::relabel(
   TraxelTrackIndexMapType::const_iterator traxel_track_it;
   typedef typename vigra::MultiArrayView<N, LabelType>::iterator ImageItType;
   for (ImageItType it = label_image.begin(); it != label_image.end(); it++) {
-    TraxelIndexType traxel_index(timestep, *it);
+    if (*it == 0)
+      continue;
+
+    TraxelIndexType traxel_index(timestep - timeframe_offset_, *it);
     traxel_track_it = traxel_track_map_.find(traxel_index);
     if (traxel_track_it != traxel_track_map_.end()){
       *it = traxel_track_it->second;
     } else {
+//      std::cout << "WARNING: could not find frame " << timestep << " traxel "
+//                << *it << ". Tracking might be inconsistent!" << std::endl;
       *it = 0;
     }
   }

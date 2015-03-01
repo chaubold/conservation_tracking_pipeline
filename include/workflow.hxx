@@ -169,6 +169,12 @@ Lineage Workflow::run() {
     // extract the traxel if this frame is within the range to be tracked:
     if (timestep < options_.get_option<size_t>("time_range_0")
         || timestep > options_.get_option<size_t>("time_range_1")) {
+      // if we jumped over the last frame to track, then we still need to add its traxels to the TS
+      if (timestep == 1 + options_.get_option<size_t>("time_range_1")) {
+        for(pgmlink::Traxel& t : traxels_prev_frame) {
+          pgmlink::add(ts, t);
+        }
+      }
       traxels_curr_frame.clear();
       continue;
     }
