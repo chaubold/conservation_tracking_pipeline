@@ -25,6 +25,53 @@ Lineage::Lineage(const EventVectorVectorType& events, size_t timeframe_offset):
   }
 }
 
+// TODO not very efficient
+std::vector<LabelType> Lineage::find_children_tracks(
+  const LabelType track) const
+{
+  std::vector<LabelType> ret;
+  for(std::pair<LabelType, LabelType> pair : track_track_parent_map_) {
+    if (pair.second == track) {
+      ret.push_back(pair.first);
+    }
+  }
+  return ret;
+}
+
+void Lineage::restrict_to_traxel_descendants(const TraxelVectorType traxels) {
+  // get all track ids that contain the traxels descendants
+  std::set<LabelType> tracks_to_keep;
+  for(pgmlink::Traxel traxel : traxels) {
+    TraxelIndexType traxel_index(traxel.Timestep, traxel.Id);
+    // get the track id that contains this traxel
+    if (traxel_track_map_.count(traxel_index) != 0) {
+      LabelType track = traxel_track_map_[traxel_index];
+      // keep this track
+      tracks_to_keep.insert(track);
+      // keep all childrent tracks as well
+      std::vector<LabelType> children_tracks = find_children_tracks(track);
+      for(LabelType child_track : children_tracks) {
+        tracks_to_keep.insert(child_track);
+      }
+    }
+  }
+  // remove all traxel from the traxel index map if the corresponding track is
+  // not in the tracks_to_keep set
+  {
+    TraxelTrackIndexMapType::iterator tt_it = traxel_track_map_.begin();
+    while (tt_it != traxel_track_map_.end()) {
+      TraxelTrackIndexMapType::iterator tt_curr_it = tt_it;
+      tt_it++;
+      if (tracks_to_keep.count(tt_curr_it->second) == 0) {
+        // TODO what about the resolved_map_?
+        traxel_track_map_.erase(tt_curr_it->first);
+      }
+    }
+  }
+  // clean up (make lineage object consistent again)
+  clean_up();
+}
+
 void Lineage::handle_event(const pgmlink::Event& event, const int timestep) {
   switch(event.type) {
   case pgmlink::Event::Move:
