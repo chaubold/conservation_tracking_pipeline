@@ -12,7 +12,7 @@ set(HDF5_USE_STATIC_LIBRARIES ON)
 find_package(Cplex REQUIRED)
 find_package(VIGRA REQUIRED)
 find_package(HDF5 REQUIRED COMPONENTS C CXX HL)
-find_package(Boost REQUIRED COMPONENTS filesystem system python)
+find_package(Boost REQUIRED COMPONENTS filesystem system python serialization)
 find_package(PythonLibs REQUIRED)
 find_package(PGMLINK REQUIRED)
 

@@ -1,5 +1,8 @@
 #include "workflow.hxx"
 
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+
 namespace fs = boost::filesystem;
 
 namespace isbi_pipeline {
@@ -196,6 +199,13 @@ void Workflow::init(int argc, char* argv[]) {
   }
   res_path_vec_ = create_filenames(res_dir, "mask###.tif", raw_path_vec_.size());
   res_path_ = fs::system_complete(res_dir.string() + "/res_track.txt");
+  traxelstore_dump_path_ = fs::system_complete(seg_dir.string() + "/traxelstore.dump");
+}
+
+void Workflow::dump_traxelstore(TraxelStoreType& ts) {
+  std::ofstream dump(traxelstore_dump_path_.string());
+  boost::archive::binary_oarchive a(dump);
+  a << ts;
 }
 
 }

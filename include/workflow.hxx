@@ -63,6 +63,7 @@ class Workflow {
   template<int N> void extract_masked_traxels(
       const vigra::MultiArray<N, LabelType> &segmentation,
       const TraxelVectorType& traxels);
+  void dump_traxelstore(TraxelStoreType& ts);
 private:
   bool calculate_segmentation_;
   bool segmentation_dump_;
@@ -80,6 +81,7 @@ private:
   std::vector<PathType> seg_path_vec_;
   std::vector<PathType> res_path_vec_;
   PathType res_path_; // for lineage
+  PathType traxelstore_dump_path_;
   // first frame masking:
   bool has_mask_image_;
   PathType mask_image_file_;
@@ -216,6 +218,10 @@ Lineage Workflow::run() {
   for(pgmlink::Traxel& t : traxels_temp[curr_frame_index]) {
     pgmlink::add(ts, t);
   }
+
+  // dump traxelstore
+  dump_traxelstore(ts);
+
   /*=========================
     tracking
   =========================*/
