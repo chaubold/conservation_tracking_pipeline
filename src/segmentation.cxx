@@ -204,6 +204,7 @@ int FeatureCalculator<N>::calculate(
   const vigra::MultiArrayView<N, DataType>& image,
   vigra::MultiArray<N+1, DataType>& features)
 {
+  std::cout << "\tcalculating " << get_feature_size() << " features" << std::endl;
   typedef typename vigra::MultiArrayShape<N+1>::type FeaturesShapeType;
   typedef typename vigra::MultiArrayShape<N>::type ImageShapeType;
   typedef typename vigra::MultiArrayView<N+1, DataType> FeaturesViewType;
@@ -213,7 +214,9 @@ int FeatureCalculator<N>::calculate(
   FeaturesShapeType features_shape = append_to_shape<N>(
     image.shape(),
     get_feature_size());
-  features.reshape(features_shape);
+  if (features.shape() != features_shape) {
+    features.reshape(features_shape);
+  }
   
   // store all offsets and keep scope of variable offset within the
   // for loop
@@ -273,13 +276,14 @@ template class FeatureCalculator<3>;
 ////
 template<int N>
 void Segmentation<N>::initialize(const vigra::MultiArray<N, DataType>& image) {
-  segmentation_image_.reshape(image.shape());
-  label_image_.reshape(image.shape());
+  if (segmentation_image_.shape() != image.shape()) {
+    segmentation_image_.reshape(image.shape());
+    label_image_.reshape(image.shape());
+  }
   // TODO ugly
   typename vigra::MultiArrayShape<N+1>::type prediction_map_shape =
     append_to_shape<N>(image.shape(), 2);
-  prediction_map_.reshape(prediction_map_shape);
-  prediction_map_.init(0.0);
+  prediction_map_.reshape(prediction_map_shape, 0.0);
 }
 
 template<int N>

@@ -71,17 +71,24 @@ void save_multi_array<3>(
 template<>
 void save_multi_array<2>(
   vigra::MultiArray<2, LabelType>& multi_array,
-  const PathType& path)
+  const PathType& path,
+  bool transform_to_uint16)
 {
-  vigra::exportImage(multi_array, path.string());
+  vigra::ImageExportInfo export_info(path.string().c_str());
+  if (transform_to_uint16)
+    export_info.setPixelType("UINT16");
+  vigra::exportImage(multi_array, export_info);
 }
 
 template<>
 void save_multi_array<3>(
   vigra::MultiArray<3, LabelType>& multi_array,
-  const PathType& path)
+  const PathType& path,
+  bool transform_to_uint16)
 {
   vigra::VolumeExportInfo export_info(path.string().c_str());
+  if (transform_to_uint16)
+    export_info.setPixelType("UINT16");
   vigra::exportVolume(multi_array, export_info);
 }
 

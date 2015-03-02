@@ -25,7 +25,11 @@ namespace isbi_pipeline {
 typedef float DataType;
 
 // Type for labels
-typedef short unsigned int LabelType;
+#ifndef USE_32_BIT_LABELS
+typedef vigra::UInt16 LabelType;
+#else
+typedef vigra::UInt32 LabelType;
+#endif
 
 // Type for reading the feature configuration
 typedef std::vector<std::pair<std::string, DataType> > StringDataPairVectorType;

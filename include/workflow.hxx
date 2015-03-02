@@ -48,7 +48,8 @@ void load_multi_array(
 template<int N>
 void save_multi_array(
   vigra::MultiArray<N, LabelType>& multi_array,
-  const PathType& path);
+  const PathType& path,
+  bool transform_to_uint16 = false);
 
 template<int N>
 void save_multi_array(
@@ -133,6 +134,10 @@ Lineage Workflow::run() {
   size_t prev_frame_index = 0;
   std::vector<PathType>::const_iterator raw_path_it = raw_path_vec_.begin();
   std::vector<PathType>::const_iterator seg_path_it = seg_path_vec_.begin();
+
+  // memory for the segmentation
+  Segmentation<N> segmentation;
+
   for(
     size_t timestep = 0;
     raw_path_it != raw_path_vec_.end();
@@ -147,8 +152,7 @@ Lineage Workflow::run() {
     // load the raw image
     vigra::MultiArray<N, DataType> raw_image;
     load_multi_array<N>(raw_image, *raw_path_it);
-    // memory for the segmentation
-    Segmentation<N> segmentation;
+    
     if (calculate_segmentation_) {
       // calculate the segmentation
       std::cout << "calculate segmentation" << std::endl;
@@ -261,7 +265,7 @@ Lineage Workflow::run() {
     lineage.relabel<N>(label_image, timestep, coordinate_map_ptr);
     // save results
     std::cout << "save results to " << res_path_it->string() << std::endl;
-    save_multi_array<N>(label_image, *res_path_it);
+    save_multi_array<N>(label_image, *res_path_it, true);
   }
   // save lineage
   std::cout << "save lineage to " << res_path_.string() << std::endl;
