@@ -117,7 +117,7 @@ int FeatureCalculator<N>::calculate_gaussian_gradient_magnitude(
   vigra::MultiArrayView<N+1, DataType>& features,
   DataType feature_scale) const
 {
-  vigra::MultiArrayView<N, DataType> results(features.template bind<2>(0));
+  vigra::MultiArrayView<N, DataType> results(features.template bind<N>(0));
   vigra::MultiArray<N, vigra::TinyVector<DataType, N> > temp(image.shape());
   vigra::gaussianGradientMultiArray(
     srcMultiArrayRange(image),
