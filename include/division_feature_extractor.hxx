@@ -172,8 +172,12 @@ void DivisionFeatureExtractor<N, LabelType>::extract(std::vector<pgmlink::Traxel
 										 std::vector<pgmlink::Traxel>& traxels_next_frame,
 										 vigra::MultiArrayView<N, LabelType> label_image_next_frame)
 {
-	for(pgmlink::Traxel& t : traxels_current_frame)
+
+	//for(pgmlink::Traxel& t : traxels_current_frame)
+	#pragma omp parallel for
+	for(size_t i = 0; i < traxels_current_frame.size(); i++)
 	{
+		pgmlink::Traxel& t = traxels_current_frame[i];
 		// std::cout << "Investigating " << t << " at com " << t.features["RegionCenter"] << std::endl;
 		std::vector<TraxelWithDistance> nearest_neighbors = find_nearest_neighbors(t.features["RegionCenter"],
 																				   traxels_next_frame,
