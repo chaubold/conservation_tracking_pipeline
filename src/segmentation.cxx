@@ -115,18 +115,20 @@ template<int N>
 int FeatureCalculator<N>::calculate_gaussian_gradient_magnitude(
   const vigra::MultiArrayView<N, DataType>& image,
   vigra::MultiArrayView<N+1, DataType>& features,
-  DataType feature_scale) const
+  DataType feature_scale)
 {
   vigra::MultiArrayView<N, DataType> results(features.template bind<N>(0));
-  vigra::MultiArray<N, vigra::TinyVector<DataType, N> > temp(image.shape());
+  if (eigenvalue_temp_.shape() != image.shape()) {
+    eigenvalue_temp_.reshape(image.shape());
+  }
   vigra::gaussianGradientMultiArray(
     srcMultiArrayRange(image),
-    destMultiArray(temp),
+    destMultiArray(eigenvalue_temp_),
     feature_scale,
     conv_options_);
   vigra::VectorNormFunctor<vigra::TinyVector<DataType, N> > norm;
   vigra::transformMultiArray(
-    srcMultiArrayRange(temp),
+    srcMultiArrayRange(eigenvalue_temp_),
     destMultiArray(results),
     norm);
   return 0;
@@ -136,9 +138,11 @@ template<int N>
 int FeatureCalculator<N>::calculate_difference_of_gaussians(
   const vigra::MultiArrayView<N, DataType>& image,
   vigra::MultiArrayView<N+1, DataType>& features,
-  DataType feature_scale) const
+  DataType feature_scale)
 {
-  vigra::MultiArray<N, DataType> temp(image.shape());
+  if (feature_temp_.shape() != image.shape()) {
+    feature_temp_.reshape(image.shape());
+  }
   vigra::MultiArrayView<N, DataType> results(features.template bind<N>(0));
   vigra::gaussianSmoothMultiArray(
     srcMultiArrayRange(image),
@@ -147,10 +151,10 @@ int FeatureCalculator<N>::calculate_difference_of_gaussians(
     conv_options_);
   vigra::gaussianSmoothMultiArray(
     srcMultiArrayRange(image),
-    destMultiArray(temp),
+    destMultiArray(feature_temp_),
     feature_scale * 0.66,
     conv_options_);
-  results -= temp;
+  results -= feature_temp_;
   return 0;
 }
 
@@ -158,22 +162,24 @@ template<int N>
 int FeatureCalculator<N>::calculate_structure_tensor_eigenvalues(
   const vigra::MultiArrayView<N, DataType>& image,
   vigra::MultiArrayView<N+1, DataType>& features,
-  DataType feature_scale) const
+  DataType feature_scale)
 {
-  vigra::MultiArray<N, vigra::TinyVector<DataType, (N*(N+1))/2> > tensor(
-    image.shape());
-  vigra::MultiArray<N, vigra::TinyVector<DataType, N> > eigenvalues(
-    image.shape());
+  if (tensor_temp_.shape() != image.shape()) {
+    tensor_temp_.reshape(image.shape());
+  }
+  if (eigenvalue_temp_.shape() != image.shape()) {
+    eigenvalue_temp_.reshape(image.shape());
+  }
   vigra::structureTensorMultiArray(
     srcMultiArrayRange(image),
-    destMultiArray(tensor),
+    destMultiArray(tensor_temp_),
     feature_scale,
     feature_scale * 0.5,
     conv_options_);
   vigra::tensorEigenvaluesMultiArray(
-    srcMultiArrayRange(tensor),
-    destMultiArray(eigenvalues));
-  features = eigenvalues.expandElements(N);
+    srcMultiArrayRange(tensor_temp_),
+    destMultiArray(eigenvalue_temp_));
+  features = eigenvalue_temp_.expandElements(N);
   return 0;
 }
 
@@ -181,21 +187,26 @@ template<int N>
 int FeatureCalculator<N>::calculate_hessian_of_gaussian_eigenvalues(
   const vigra::MultiArrayView<N, DataType>& image,
   vigra::MultiArrayView<N+1, DataType>& features,
-  DataType feature_scale) const
+  DataType feature_scale)
 {
-  vigra::MultiArray<N, vigra::TinyVector<DataType, (N*(N+1))/2> > hessian(
-    image.shape());
-  vigra::MultiArray<N, vigra::TinyVector<DataType, N> > eigenvalues(
-    image.shape());
+  // using tensor as hessian here
+  if (tensor_temp_.shape() != image.shape()) {
+    tensor_temp_.reshape(image.shape());
+  }
+  if (eigenvalue_temp_.shape() != image.shape()) {
+    eigenvalue_temp_.reshape(image.shape());
+  }
+  // vigra::MultiArray<N, vigra::TinyVector<DataType, (N*(N+1))/2> > hessian(
+  //   image.shape());
   vigra::hessianOfGaussianMultiArray(
     srcMultiArrayRange(image),
-    destMultiArray(hessian),
+    destMultiArray(tensor_temp_),
     feature_scale,
     conv_options_);
   vigra::tensorEigenvaluesMultiArray(
-    srcMultiArrayRange(hessian),
-    destMultiArray(eigenvalues));
-  features = eigenvalues.expandElements(N);
+    srcMultiArrayRange(tensor_temp_),
+    destMultiArray(eigenvalue_temp_));
+  features = eigenvalue_temp_.expandElements(N);
   return 0;
 }
 
@@ -233,7 +244,9 @@ int FeatureCalculator<N>::calculate(
   }
 
   // compute features in parallel
-  #pragma omp parallel for
+  // FIXME: cannot use parallel feature computation any more,
+  // as we are reusing the temporary arrays to reduce memory consumption (24GB limit!)
+  // #pragma omp parallel for
   for(size_t i = 0; i < feature_scales_.size(); i++) {
     // get the offset and size of the current feature in the feature
     // arrays

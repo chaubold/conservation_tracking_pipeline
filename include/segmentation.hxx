@@ -55,20 +55,25 @@ class FeatureCalculator {
   int calculate_gaussian_gradient_magnitude(
     const vigra::MultiArrayView<N, DataType>& image,
     vigra::MultiArrayView<N+1, DataType>& features,
-    DataType feature_scale) const;
+    DataType feature_scale);
   int calculate_difference_of_gaussians(
     const vigra::MultiArrayView<N, DataType>& image,
     vigra::MultiArrayView<N+1, DataType>& features,
-    DataType feature_scale) const;
+    DataType feature_scale);
   int calculate_structure_tensor_eigenvalues(
     const vigra::MultiArrayView<N, DataType>& image,
     vigra::MultiArrayView<N+1, DataType>& features,
-    DataType feature_scale) const;
+    DataType feature_scale);
   int calculate_hessian_of_gaussian_eigenvalues(
     const vigra::MultiArrayView<N, DataType>& image,
     vigra::MultiArrayView<N+1, DataType>& features,
-    DataType feature_scale) const;
+    DataType feature_scale);
   
+  // temporary storage for feature computation allocated only once
+  vigra::MultiArray<N, DataType> feature_temp_;
+  vigra::MultiArray<N, vigra::TinyVector<DataType, (N*(N+1))/2> > tensor_temp_;
+  vigra::MultiArray<N, vigra::TinyVector<DataType, N> > eigenvalue_temp_;
+
   const StringDataPairVectorType& feature_scales_;
   DataType window_size_;
   std::map<std::string, size_t> feature_sizes_;
