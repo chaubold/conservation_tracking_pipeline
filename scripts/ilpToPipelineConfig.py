@@ -55,7 +55,13 @@ if __name__ == "__main__":
 			in_f.copy('CountClassification/ClassifierForests', out_rf)
 
 			out_rf = out_f.create_group('DivisionDetection')
-			in_f.copy('DivisionDetection/ClassifierForests', out_rf)
+			try:
+				in_f.copy('DivisionDetection/ClassifierForests', out_rf)
+			except:
+				if in_f['ConservationTracking/Parameters/0/withDivisions'].value:
+					raise Exception("Did not find DivisionDetection/ClassifierForests even though withDivisions is selected")
+				in_f.copy('CountClassification/ClassifierForests', out_rf)
+				print("Copying dummy classifier for divisions")
 
 			# ------------------------------------------------------
 			# copy tracking configuration
