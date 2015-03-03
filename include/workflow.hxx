@@ -201,14 +201,16 @@ Lineage Workflow::run() {
     // compute division features and add them to the traxelstore if
     // this is not the first frame
     if(raw_path_it != raw_path_vec_.begin()) {
-      div_feature_extractor.extract(
-        traxels_prev_frame,
-        traxels_curr_frame,
-        segmentation.label_image_);
-      div_feature_extractor.compute_div_prob(
-        traxels_prev_frame,
-        div_feature_list_,
-        div_feature_rfs_);
+      if (options_.get_option<bool>("withDivisions")) {
+        div_feature_extractor.extract(
+          traxels_prev_frame,
+          traxels_curr_frame,
+          segmentation.label_image_);
+        div_feature_extractor.compute_div_prob(
+          traxels_prev_frame,
+          div_feature_list_,
+          div_feature_rfs_);
+      }
       // add the traxels of the previous frame to the traxelstore
       for(pgmlink::Traxel& t : traxels_prev_frame) {
         pgmlink::add(ts, t);
