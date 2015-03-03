@@ -43,18 +43,22 @@ ELSE()
     MESSAGE(SEND_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 ENDIF()
 
+INCLUDE_DIRECTORIES(
+  "${PROJECT_SOURCE_DIR}/include/"
+)
+INCLUDE_DIRECTORIES(include ${CPLEX_INCLUDE_DIRS})
+
 SET(WITH_CHECKED_STL "True" CACHE BOOL "Build with checked libg++ for more robust code (may degrade performance).")
 IF(WITH_CHECKED_STL)
   ADD_DEFINITIONS(-D_GLIBCXX_DEBUG)
 ENDIF()
 
-INCLUDE_DIRECTORIES(
-  "${PROJECT_SOURCE_DIR}/include/"
-)
+SET(WITH_PARALLEL_FEATURES "True" CACHE BOOL "Switch to false if you need to restrict RAM usage")
+IF(WITH_PARALLEL_FEATURES)
+  ADD_DEFINITIONS(-DUSE_PARALLEL_FEATURES)
+ENDIF()
 
 SET(WITH_TOOLS "False" CACHE BOOL "Build auxiliary tools for pipeline.")
-
-INCLUDE_DIRECTORIES(include ${CPLEX_INCLUDE_DIRS})
 
 # CPLEX switch to be compatible with STL
 ADD_DEFINITIONS(-DIL_STD)

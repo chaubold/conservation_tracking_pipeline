@@ -118,6 +118,9 @@ int FeatureCalculator<N>::calculate_gaussian_gradient_magnitude(
   DataType feature_scale)
 {
   vigra::MultiArrayView<N, DataType> results(features.template bind<N>(0));
+  vigra::VectorNormFunctor<vigra::TinyVector<DataType, N> > norm;
+#ifndef USE_PARALLEL_FEATURES
+  // reuse eigenvalue_temp
   if (eigenvalue_temp_.shape() != image.shape()) {
     eigenvalue_temp_.reshape(image.shape());
   }
@@ -126,11 +129,22 @@ int FeatureCalculator<N>::calculate_gaussian_gradient_magnitude(
     destMultiArray(eigenvalue_temp_),
     feature_scale,
     conv_options_);
-  vigra::VectorNormFunctor<vigra::TinyVector<DataType, N> > norm;
   vigra::transformMultiArray(
     srcMultiArrayRange(eigenvalue_temp_),
     destMultiArray(results),
     norm);
+#else
+  vigra::MultiArray<N, vigra::TinyVector<DataType, N> > temp(image.shape());
+  vigra::gaussianGradientMultiArray(
+    srcMultiArrayRange(image),
+    destMultiArray(temp),
+    feature_scale,
+    conv_options_);
+  vigra::transformMultiArray(
+    srcMultiArrayRange(temp),
+    destMultiArray(results),
+    norm);
+#endif
   return 0;
 }
 
@@ -140,21 +154,31 @@ int FeatureCalculator<N>::calculate_difference_of_gaussians(
   vigra::MultiArrayView<N+1, DataType>& features,
   DataType feature_scale)
 {
-  if (feature_temp_.shape() != image.shape()) {
-    feature_temp_.reshape(image.shape());
-  }
   vigra::MultiArrayView<N, DataType> results(features.template bind<N>(0));
   vigra::gaussianSmoothMultiArray(
     srcMultiArrayRange(image),
     destMultiArray(results),
     feature_scale,
     conv_options_);
+#ifndef USE_PARALLEL_FEATURES
+  if (feature_temp_.shape() != image.shape()) {
+    feature_temp_.reshape(image.shape());
+  }
   vigra::gaussianSmoothMultiArray(
     srcMultiArrayRange(image),
     destMultiArray(feature_temp_),
     feature_scale * 0.66,
     conv_options_);
   results -= feature_temp_;
+#else
+  vigra::MultiArray<N, DataType> temp(image.shape());
+  vigra::gaussianSmoothMultiArray(
+    srcMultiArrayRange(image),
+    destMultiArray(temp),
+    feature_scale * 0.66,
+    conv_options_);
+  results -= temp;
+#endif
   return 0;
 }
 
@@ -164,6 +188,7 @@ int FeatureCalculator<N>::calculate_structure_tensor_eigenvalues(
   vigra::MultiArrayView<N+1, DataType>& features,
   DataType feature_scale)
 {
+#ifndef USE_PARALLEL_FEATURES
   if (tensor_temp_.shape() != image.shape()) {
     tensor_temp_.reshape(image.shape());
   }
@@ -180,6 +205,22 @@ int FeatureCalculator<N>::calculate_structure_tensor_eigenvalues(
     srcMultiArrayRange(tensor_temp_),
     destMultiArray(eigenvalue_temp_));
   features = eigenvalue_temp_.expandElements(N);
+#else
+  vigra::MultiArray<N, vigra::TinyVector<DataType, (N*(N+1))/2> > tensor(
+    image.shape());
+  vigra::MultiArray<N, vigra::TinyVector<DataType, N> > eigenvalues(
+    image.shape());
+  vigra::structureTensorMultiArray(
+    srcMultiArrayRange(image),
+    destMultiArray(tensor),
+    feature_scale,
+    feature_scale * 0.5,
+    conv_options_);
+  vigra::tensorEigenvaluesMultiArray(
+    srcMultiArrayRange(tensor),
+    destMultiArray(eigenvalues));
+  features = eigenvalues.expandElements(N);
+#endif
   return 0;
 }
 
@@ -189,6 +230,7 @@ int FeatureCalculator<N>::calculate_hessian_of_gaussian_eigenvalues(
   vigra::MultiArrayView<N+1, DataType>& features,
   DataType feature_scale)
 {
+#ifndef USE_PARALLEL_FEATURES
   // using tensor as hessian here
   if (tensor_temp_.shape() != image.shape()) {
     tensor_temp_.reshape(image.shape());
@@ -196,8 +238,6 @@ int FeatureCalculator<N>::calculate_hessian_of_gaussian_eigenvalues(
   if (eigenvalue_temp_.shape() != image.shape()) {
     eigenvalue_temp_.reshape(image.shape());
   }
-  // vigra::MultiArray<N, vigra::TinyVector<DataType, (N*(N+1))/2> > hessian(
-  //   image.shape());
   vigra::hessianOfGaussianMultiArray(
     srcMultiArrayRange(image),
     destMultiArray(tensor_temp_),
@@ -207,6 +247,21 @@ int FeatureCalculator<N>::calculate_hessian_of_gaussian_eigenvalues(
     srcMultiArrayRange(tensor_temp_),
     destMultiArray(eigenvalue_temp_));
   features = eigenvalue_temp_.expandElements(N);
+#else
+vigra::MultiArray<N, vigra::TinyVector<DataType, (N*(N+1))/2> > hessian(
+    image.shape());
+  vigra::MultiArray<N, vigra::TinyVector<DataType, N> > eigenvalues(
+    image.shape());
+  vigra::hessianOfGaussianMultiArray(
+    srcMultiArrayRange(image),
+    destMultiArray(hessian),
+    feature_scale,
+    conv_options_);
+  vigra::tensorEigenvaluesMultiArray(
+    srcMultiArrayRange(hessian),
+    destMultiArray(eigenvalues));
+  features = eigenvalues.expandElements(N);
+#endif
   return 0;
 }
 
@@ -243,10 +298,9 @@ int FeatureCalculator<N>::calculate(
     }
   }
 
-  // compute features in parallel
-  // FIXME: cannot use parallel feature computation any more,
-  // as we are reusing the temporary arrays to reduce memory consumption (24GB limit!)
-  // #pragma omp parallel for
+#ifdef USE_PARALLEL_FEATURES
+  #pragma omp parallel for
+#endif
   for(size_t i = 0; i < feature_scales_.size(); i++) {
     // get the offset and size of the current feature in the feature
     // arrays
@@ -388,7 +442,7 @@ int SegmentationCalculator<N>::calculate(
     vigra::Shape2(pixel_count, 2),
     segmentation.prediction_map_.data());
   // loop over all random forests for prediction probabilities
-
+  std::cout << "\tPixel Classification" << std::endl;
   #pragma omp parallel for
   for(size_t rf = 0; rf < random_forests_.size(); rf++)
   {
@@ -404,6 +458,7 @@ int SegmentationCalculator<N>::calculate(
   }
 
   // assign the labels
+  std::cout << "\tThresholding" << std::endl;
   prob_threshold = prob_threshold * random_forests_.size();
   typename vigra::MultiArrayView<N, LabelType>::iterator seg_it;
   seg_it = segmentation.segmentation_image_.begin();
@@ -414,6 +469,7 @@ int SegmentationCalculator<N>::calculate(
       *seg_it = 0;
     }
   }
+  std::cout << "\tConnected Components" << std::endl;
   // extract objects
   segmentation.label_count_ = vigra::labelMultiArrayWithBackground(
     segmentation.segmentation_image_,
