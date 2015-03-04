@@ -169,9 +169,9 @@ void Workflow::init(int argc, char* argv[]) {
   // check directories
   check_directory(raw_dir, false);
   if (calculate_segmentation_) {
-    check_directory(seg_dir, false);
-  } else {
     check_directory(seg_dir, true);
+  } else {
+    check_directory(seg_dir, false);
   }
   check_directory(res_dir, true);
   // load tracking config
