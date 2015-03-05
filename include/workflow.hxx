@@ -298,6 +298,7 @@ void Workflow::extract_masked_traxels(
   std::set<LabelType> masked_labels_in_first_frame =
       DivisionFeatureExtractor<N, LabelType>::find_unique_labels_in_roi(mask_image);
   // find corresponding traxels
+  size_t missed_labels = 0;
   for (LabelType label : masked_labels_in_first_frame)
   {
     auto compare_predicate = [=](const pgmlink::Traxel& t) -> bool {
@@ -308,7 +309,8 @@ void Workflow::extract_masked_traxels(
       traxels_to_keep_.push_back(*traxel_it);
     }
     else {
-      throw std::runtime_error("Could not find traxel for selected label");
+      std::cout << "Could not find traxel for selected label " << label 
+                << ". Missed " << ++missed_labels << " / " << masked_labels_in_first_frame.size() << std::endl;
     }
   }
 
