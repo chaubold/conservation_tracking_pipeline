@@ -6,12 +6,12 @@ import argparse
 
 def getSearchParameterDicts(config):
     vary_parameters = {
-        "transParameter"    : [0.2, 5.0],
-        "detWeight"         : [0.2, 5.0],
-        "appearanceCost"    : [0.2, 5.0],
-        "disappearanceCost" : [0.2, 5.0],
-        "divWeight"         : [0.2, 5.0],
-        "transWeight"       : [0.2, 5.0]}
+        "transParameter"    : [0.33, 3.0],
+        "detWeight"         : [0.33, 3.0],
+        "appearanceCost"    : [0.33, 3.0],
+        "disappearanceCost" : [0.33, 3.0],
+        "divWeight"         : [0.33, 3.0],
+        "transWeight"       : [0.33, 3.0]}
     return_configs = []
     return_configs.append(config.copy())
     for key in vary_parameters:
@@ -76,7 +76,10 @@ def evalTracking(directory, eval_exec):
     if matches is None:
         raise RuntimeError("cannot get sequence based on path: {}".format(full_directory))
     print("Evaluate dataset {} with sequence {}".format(matches.group(1), matches.group(2)))
-    output = subprocess.check_output([eval_exec, matches.group(1), matches.group(2)])
+    try:
+        output = subprocess.check_output([eval_exec, matches.group(1), matches.group(2)])
+    except:
+        return "invalid"
     for line in output.splitlines():
         matches = re.search(r'^TRA measure:\s*(.+)$', line)
         if matches is None:
@@ -94,11 +97,11 @@ if __name__ == "__main__":
     base_config = readCSVToDict("{}_CFG/tracking_config.txt".format(dir_base))
     configs = getSearchParameterDicts(base_config)
     # do the tracking
-    results_filename = "{}/tra_measures.txt".format(dir_base)
+    results_filename = "{}_RES/tra_measures.txt".format(dir_base)
     results = open(results_filename, "w")
     results.close()
     for index, config in enumerate(configs):
-        config_path = "{}/tracking_config_{}.txt".format(dir_base, index)
+        config_path = "{}_CFG/tracking_config_{}.txt".format(dir_base, index)
         saveDictToCSV(config_path, config)
         trackSequenceWithConfig(dir_base, config_path, args.tra_exec)
         tra_measure = evalTracking(dir_base, args.eval_exec)
