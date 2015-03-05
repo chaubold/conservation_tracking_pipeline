@@ -315,6 +315,7 @@ int FeatureCalculator<N>::calculate(
     // branch between the different features
     const std::string& feature_name = feature_scales_[i].first;
     const DataType& scale = feature_scales_[i].second;
+    
     if (!feature_name.compare("GaussianSmoothing")) {
       calculate_gaussian_smoothing(image, features_view, scale);
     } else if (!feature_name.compare("LaplacianOfGaussian")) {

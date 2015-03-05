@@ -23,7 +23,8 @@ class Lineage {
   Lineage(const EventVectorVectorType& events, size_t timeframe_offset = 0);
   template<int N>
   void relabel(
-    vigra::MultiArrayView<N, LabelType>& label_image,
+    vigra::MultiArrayView<N, LabelType>& segmentation_image,
+    vigra::MultiArrayView<N, vigra::UInt16>& label_image,
     const int timestep,
     const CoordinateMapPtrType coordinate_map_ptr
       = CoordinateMapPtrType()) const;
@@ -63,7 +64,8 @@ class Lineage {
 // implementation
 template<int N>
 void Lineage::relabel(
-  vigra::MultiArrayView<N, LabelType>& label_image,
+  vigra::MultiArrayView<N, LabelType>& segmentation_image,
+  vigra::MultiArrayView<N, vigra::UInt16>& label_image,
   const int timestep,
   const CoordinateMapPtrType coordinate_map_ptr) const
 {
@@ -74,7 +76,7 @@ void Lineage::relabel(
         for (TraxelIndexType new_index : it->second) {
           pgmlink::update_labelimage<N, LabelType>(
             coordinate_map_ptr,
-            label_image,
+            segmentation_image,
             new_index.first + timeframe_offset_,
             new_index.second);
         }
@@ -82,19 +84,25 @@ void Lineage::relabel(
     }
   }
   TraxelTrackIndexMapType::const_iterator traxel_track_it;
-  typedef typename vigra::MultiArrayView<N, LabelType>::iterator ImageItType;
-  for (ImageItType it = label_image.begin(); it != label_image.end(); it++) {
-    if (*it == 0)
+  typedef typename vigra::MultiArrayView<N, LabelType>::iterator SegItType;
+  typedef typename vigra::MultiArrayView<N, vigra::UInt16>::iterator LabelItType;
+  LabelItType l_it = label_image.begin();
+  assert(label_image.shape() == segmentation_image.shape());
+  
+  for (SegItType s_it = segmentation_image.begin();
+       s_it != segmentation_image.end();
+       s_it++, l_it++) {
+    if (*s_it == 0)
       continue;
 
-    TraxelIndexType traxel_index(timestep - timeframe_offset_, *it);
+    TraxelIndexType traxel_index(timestep - timeframe_offset_, *s_it);
     traxel_track_it = traxel_track_map_.find(traxel_index);
     if (traxel_track_it != traxel_track_map_.end()){
-      *it = traxel_track_it->second;
+      *l_it = traxel_track_it->second;
     } else {
 //      std::cout << "WARNING: could not find frame " << timestep << " traxel "
 //                << *it << ". Tracking might be inconsistent!" << std::endl;
-      *it = 0;
+      *l_it = 0;
     }
   }
 }

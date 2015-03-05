@@ -48,13 +48,19 @@ void load_multi_array(
 template<int N>
 void save_multi_array(
   vigra::MultiArray<N, LabelType>& multi_array,
-  const PathType& path,
-  bool transform_to_uint16 = false);
+  const PathType& path);
 
 template<int N>
 void save_multi_array(
   vigra::MultiArray<N, DataType>& multi_array,
   const PathType& path);
+
+#ifdef USE_32_BIT_LABELS
+template<int N>
+void save_multi_array(
+  vigra::MultiArray<N, vigra::UInt16>& multi_array,
+  const PathType& path);
+#endif
 
 class Workflow {
  public:
@@ -231,7 +237,7 @@ Lineage Workflow::run() {
   /*=========================
     tracking
   =========================*/
-//  EventVectorVectorType events = track(ts, options_, coordinate_map_ptr, traxels_to_keep_);
+  // EventVectorVectorType events = track(ts, options_, coordinate_map_ptr, traxels_to_keep_);
   EventVectorVectorType events = track(ts, options_, coordinate_map_ptr);
   Lineage lineage(events, options_.get_option<size_t>("time_range_0"));
   /*========================
@@ -248,26 +254,35 @@ Lineage Workflow::run() {
   /*=========================
     relabeling
   =========================*/
-  std::vector<PathType>::const_iterator res_path_it = res_path_vec_.begin();
-  seg_path_it = seg_path_vec_.begin();
+  std::vector<PathType>::const_iterator res_path_it;
+
+  // #pragma omp parallel for
   for (
-    size_t timestep = 0;
-    seg_path_it != seg_path_vec_.end();
-    seg_path_it++, res_path_it++, timestep++)
+    size_t timestep = options_.get_option<size_t>("time_range_0");
+    timestep <= options_.get_option<size_t>("time_range_1");
+    timestep++)
   {
-    if (timestep < options_.get_option<size_t>("time_range_0")
-        || timestep > options_.get_option<size_t>("time_range_1")) {
-      continue;
-    }
+    seg_path_it = seg_path_vec_.begin() + timestep;
+    res_path_it = res_path_vec_.begin() + timestep;
 
     // read the label image
-    vigra::MultiArray<N, LabelType> label_image;
-    load_multi_array<N>(label_image, *seg_path_it);
+    vigra::MultiArray<N, LabelType> segmentation_image;
+    load_multi_array<N>(segmentation_image, *seg_path_it);
+
+#ifdef USE_32_BIT_LABELS
+    vigra::MultiArray<N, vigra::UInt16> label_image(segmentation_image.shape());
     // relabel the image
-    lineage.relabel<N>(label_image, timestep, coordinate_map_ptr);
+    lineage.relabel<N>(segmentation_image, label_image, timestep, coordinate_map_ptr);
     // save results
     std::cout << "save results to " << res_path_it->string() << std::endl;
-    save_multi_array<N>(label_image, *res_path_it, true);
+    save_multi_array<N>(label_image, *res_path_it);
+#else
+    // relabel the image
+    lineage.relabel<N>(segmentation_image, segmentation_image, timestep, coordinate_map_ptr);
+    // save results
+    std::cout << "save results to " << res_path_it->string() << std::endl;
+    save_multi_array<N>(segmentation_image, *res_path_it);
+#endif
   }
   // save lineage
   std::cout << "save lineage to " << res_path_.string() << std::endl;

@@ -71,27 +71,31 @@ void save_multi_array<3>(
 template<>
 void save_multi_array<2>(
   vigra::MultiArray<2, LabelType>& multi_array,
-  const PathType& path,
-  bool transform_to_uint16)
+  const PathType& path)
 {
   vigra::ImageExportInfo export_info(path.string().c_str());
-  if (transform_to_uint16)
-    export_info.setPixelType("UINT16");
   vigra::exportImage(multi_array, export_info);
 }
 
 template<>
 void save_multi_array<3>(
   vigra::MultiArray<3, LabelType>& multi_array,
-  const PathType& path,
-  bool transform_to_uint16)
+  const PathType& path)
 {
   vigra::VolumeExportInfo export_info(path.string().c_str());
-  if (transform_to_uint16)
-    export_info.setPixelType("UINT16");
   vigra::exportVolume(multi_array, export_info);
 }
 
+#ifdef USE_32_BIT_LABELS
+template<>
+void save_multi_array<3>(
+  vigra::MultiArray<3, vigra::UInt16>& multi_array,
+  const PathType& path)
+{
+  vigra::VolumeExportInfo export_info(path.string().c_str());
+  vigra::exportVolume(multi_array, export_info);
+}
+#endif
 
 void load_forests(
   RandomForestVectorType& rfs,
