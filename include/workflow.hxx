@@ -265,6 +265,11 @@ Lineage Workflow::run() {
     load_multi_array<N>(label_image, *seg_path_it);
     // relabel the image
     lineage.relabel<N>(label_image, timestep, coordinate_map_ptr);
+    if(options_.has_option<int>("dilateResult")) {
+      std::cout << "Dilate result" << std::endl;
+      int radius = options_.get_option<int>("dilateResult");
+      lineage.dilate<N>(label_image, timestep, ts, radius);
+    }
     // save results
     std::cout << "save results to " << res_path_it->string() << std::endl;
     save_multi_array<N>(label_image, *res_path_it, true);

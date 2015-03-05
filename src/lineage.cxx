@@ -1,6 +1,8 @@
 #include <sstream> /* for std::stringstream */
 #include <algorithm> /* for std::remove */
 
+#include <vigra/flatmorphology.hxx> /* for DiskDilationWithMask */
+
 #include "lineage.hxx"
 
 namespace isbi_pipeline {
@@ -241,6 +243,65 @@ void Lineage::clean_up() {
         track_track_parent_map_.erase(tt_curr_it);
       }
     }
+  }
+}
+
+template<>
+void Lineage::dilate_for_traxel<3>(
+  vigra::MultiArrayView<3, LabelType>& label_image,
+  const pgmlink::Traxel& traxel,
+  int radius) const
+{
+  throw std::runtime_error("Lineage::dilate_for_traxel<3> not implemented");
+}
+
+template<>
+void Lineage::dilate_for_traxel<2>(
+    vigra::MultiArrayView<2, LabelType>& label_image,
+    const pgmlink::Traxel& traxel,
+    int radius) const
+{
+  TraxelIndexType traxel_index(traxel.Timestep - timeframe_offset_, traxel.Id);
+  TraxelTrackIndexMapType::const_iterator track_id_it = traxel_track_map_.find(
+    traxel_index);
+  if (track_id_it != traxel_track_map_.end()) {
+    LabelType track_id = track_id_it->second;
+    vigra::TinyVector<LabelType, 2> coord_min;
+    vigra::TinyVector<LabelType, 2> coord_max;
+    const FeatureMapType& feature_map = traxel.features;
+    FeatureMapType::const_iterator f_min_it = feature_map.find("CoordMin");
+    FeatureMapType::const_iterator f_max_it = feature_map.find("CoordMax");
+    if ((f_min_it == feature_map.end()) or (f_max_it == feature_map.end())) {
+      throw std::runtime_error(
+        "cannot find \"CoordMin\" and \"CoordMax\" in feature map");
+    }
+    const FeatureArrayType& coord_min_trax = f_min_it->second;
+    const FeatureArrayType& coord_max_trax = f_max_it->second;
+    int width = radius + 1;
+    for(size_t n = 0; n < 2; n++) {
+      coord_min[n] = std::max<int>(coord_min_trax[n] - width, 0);
+      coord_max[n] = std::min<int>(coord_max_trax[n] + width, label_image.shape(n));
+    }
+    vigra::MultiArrayView<2, LabelType> subarray = label_image.subarray(
+      coord_min,
+      coord_max);
+    // std::cout << "Subarray is" << std::endl << subarray;
+    vigra::MultiArray<2, LabelType> mask(coord_max - coord_min);
+    auto equals_id = [&] (const LabelType x) {return x == track_id;};
+    vigra::transformImage(srcImageRange(subarray), destImage(mask), equals_id);
+    // std::cout << "Mask is" << std::endl << mask;
+    vigra::MultiArray<2, LabelType> mask_dilated(coord_max - coord_min);
+    vigra::discDilation(mask, mask_dilated, radius);
+    // std::cout << "Mask dilated is" << std::endl << mask_dilated;
+    auto set_id = [&] (const LabelType x, const LabelType y) {
+      if (x) {
+        return static_cast<LabelType>(track_id);
+      } else {
+        return static_cast<LabelType>(y);
+      }
+    };
+    vigra::combineTwoImages(mask_dilated, subarray, subarray, set_id);
+    // std::cout << "New subarray is" << std::endl << subarray;
   }
 }
 

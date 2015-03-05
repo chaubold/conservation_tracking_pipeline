@@ -28,12 +28,23 @@ class Lineage {
     const CoordinateMapPtrType coordinate_map_ptr
       = CoordinateMapPtrType()) const;
   template<int N>
+  void dilate(
+    vigra::MultiArrayView<N, LabelType>& label_image,
+    const int timestep,
+    const TraxelStoreType& traxelstore,
+    int radius) const;
+  template<int N>
   void restrict_to_bounding_box(
     const vigra::TinyVector<LabelType, N>& coord_min,
     const vigra::TinyVector<LabelType, N>& coord_max,
     const TraxelStoreType& traxelstore);
   void restrict_to_traxel_descendants(const TraxelVectorType traxels);
  private:
+  template<int N>
+  void dilate_for_traxel(
+    vigra::MultiArrayView<N, LabelType>& label_image,
+    const pgmlink::Traxel& traxel,
+    int radius) const;
   void handle_event(const pgmlink::Event& event, const int timestep);
   void handle_appearance(const pgmlink::Event& event, const int timestep);
   void handle_disappearance(const pgmlink::Event& event, const int timestep);
@@ -131,6 +142,24 @@ void Lineage::restrict_to_bounding_box(
     }
   }
   clean_up();
+}
+
+template<int N>
+void Lineage::dilate(
+  vigra::MultiArrayView<N, LabelType>& label_image,
+  const int timestep,
+  const TraxelStoreType& ts,
+  int radius) const
+{
+  const pgmlink::TraxelStoreByTimestep& traxels_by_timestep =
+    ts.get<pgmlink::by_timestep>();
+  std::pair<
+    pgmlink::TraxelStoreByTimestep::const_iterator,
+    pgmlink::TraxelStoreByTimestep::const_iterator> traxels_at =
+      traxels_by_timestep.equal_range(timestep);
+  for (auto it = traxels_at.first; it != traxels_at.second; it++) {
+    dilate_for_traxel<N>(label_image, *it, radius);
+  }
 }
 
 } // namespace isbi_pipeline
