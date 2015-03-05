@@ -16,6 +16,7 @@ Lineage::Lineage(const EventVectorVectorType& events, size_t timeframe_offset):
 {
   for (int timestep = 0; timestep < int(events.size()); timestep++) {
     // std::cout << "Timestep " << timestep << std::endl;
+    min_resolved_id_map_[timestep] = std::numeric_limits<LabelType>::max();
     for (
       EventVectorType::const_iterator event_it = events[timestep].begin();
       event_it != events[timestep].end();
@@ -166,6 +167,9 @@ void Lineage::handle_resolvedto(
   for (size_t n = 1; n < event.traxel_ids.size(); n++) {
     TraxelIndexType new_index(timestep, event.traxel_ids[n]);
     resolved_map_[old_index].push_back(new_index);
+    min_resolved_id_map_[timestep] = std::min<LabelType>(
+      event.traxel_ids[n],
+      min_resolved_id_map_[timestep]);
   }
 }
 

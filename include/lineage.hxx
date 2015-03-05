@@ -69,6 +69,9 @@ class Lineage {
   TrackTraxelIndexMapType track_traxel_map_;
   std::map<LabelType, LabelType> track_track_parent_map_;
   std::map<TraxelIndexType, std::vector<TraxelIndexType> > resolved_map_;
+  // min_resolved_id_map_ stores the smallest "merger-resolved-to"-id for each
+  // timestep
+  std::map<LabelType, LabelType> min_resolved_id_map_;
   friend std::ostream& operator<<(std::ostream& s, const Lineage& lineage);
 };
 
@@ -80,6 +83,25 @@ void Lineage::relabel(
   const int timestep,
   const CoordinateMapPtrType coordinate_map_ptr) const
 {
+  typedef typename vigra::MultiArrayView<N, LabelType>::iterator SegItType;
+  typedef typename vigra::MultiArrayView<N, vigra::UInt16>::iterator LabelItType;
+  assert(label_image.shape() == segmentation_image.shape());
+  // remove all objects that were to small for the size filter and whose index
+  // could be given to a new resolved traxel by pgmlink
+  std::map<LabelType, LabelType>::const_iterator min_it =
+    min_resolved_id_map_.find(timestep - timeframe_offset_);
+  if (min_it == min_resolved_id_map_.end()) {
+    throw std::runtime_error("timestep not in Lineage::min_resolved_id_map_");
+  }
+  for(
+    SegItType s_it = segmentation_image.begin();
+    s_it != segmentation_image.end();
+    s_it++)
+  {
+    if (*s_it >= (min_it->second)) {
+      *s_it = 0;
+    }
+  }
   if (coordinate_map_ptr) {
     for(auto it = resolved_map_.begin(); it != resolved_map_.end(); it++) {
       const TraxelIndexType& traxel_index = it->first;
@@ -94,12 +116,9 @@ void Lineage::relabel(
       }
     }
   }
+  // now actually relabel the image with the track ids
   TraxelTrackIndexMapType::const_iterator traxel_track_it;
-  typedef typename vigra::MultiArrayView<N, LabelType>::iterator SegItType;
-  typedef typename vigra::MultiArrayView<N, vigra::UInt16>::iterator LabelItType;
   LabelItType l_it = label_image.begin();
-  assert(label_image.shape() == segmentation_image.shape());
-  
   for (SegItType s_it = segmentation_image.begin();
        s_it != segmentation_image.end();
        s_it++, l_it++) {
