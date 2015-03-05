@@ -87,8 +87,10 @@ void Lineage::handle_event(const pgmlink::Event& event, const int timestep) {
     break;
   case pgmlink::Event::Disappearance:
     handle_disappearance(event, timestep);
+    break;
   case pgmlink::Event::ResolvedTo:
     handle_resolvedto(event, timestep);
+    break;
   default:
     break;
   }
@@ -279,7 +281,7 @@ void Lineage::dilate_for_traxel<2>(
     const FeatureArrayType& coord_max_trax = f_max_it->second;
     int width = radius + 1;
     for(size_t n = 0; n < 2; n++) {
-      coord_min[n] = std::max<int>(coord_min_trax[n] - width, 0);
+      coord_min[n] = std::max<int>(static_cast<int>(coord_min_trax[n]) - width, 0);
       coord_max[n] = std::min<int>(coord_max_trax[n] + width, label_image.shape(n));
     }
     vigra::MultiArrayView<2, LabelType> subarray = label_image.subarray(

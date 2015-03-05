@@ -120,8 +120,8 @@ void Lineage::relabel(
 
 template<int N>
 void Lineage::restrict_to_bounding_box(
-  const vigra::TinyVector<LabelType, N>& coord_min,
-  const vigra::TinyVector<LabelType, N>& coord_max,
+  const vigra::TinyVector<LabelType, N>& bb_min,
+  const vigra::TinyVector<LabelType, N>& bb_max,
   const TraxelStoreType& traxelstore)
 {
   for(
@@ -140,8 +140,8 @@ void Lineage::restrict_to_bounding_box(
     const FeatureArrayType& coord_max_trax = f_max_it->second;
     bool in_bb = true;
     for(size_t n = 0; n < N; n++) {
-      in_bb = in_bb and (coord_max_trax[n] >= coord_min[n]);
-      in_bb = in_bb and (coord_min_trax[n] <= coord_max[n]);
+      in_bb = in_bb and (coord_max_trax[n] >= bb_min[n]);
+      in_bb = in_bb and (coord_min_trax[n] <= bb_max[n]);
     }
     if(!in_bb) {
       // remove traxel and all dependent variables from lineage class
