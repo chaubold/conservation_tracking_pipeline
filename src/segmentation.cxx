@@ -458,6 +458,20 @@ int SegmentationCalculator<N>::calculate(
     }
   }
 
+  // smooth prediction map
+  if (options_.has_option<DataType>("PredictionMapSmoothing")) {
+    vigra::ConvolutionOptions<N> conv_options;
+    conv_options.filterWindowSize(2.0);
+    vigra::MultiArrayView<N, DataType> prediction_map_channel_view =
+      segmentation.prediction_map_.template bind<N>(channel_index);
+      
+    vigra::gaussianSmoothMultiArray(
+      prediction_map_channel_view,
+      prediction_map_channel_view,
+      options_.get_option<DataType>("PredictionMapSmoothing"),
+      conv_options);
+  }
+
   // assign the labels
   std::cout << "\tThresholding" << std::endl;
   prob_threshold = prob_threshold * random_forests_.size();
