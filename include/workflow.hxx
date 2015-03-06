@@ -254,16 +254,14 @@ Lineage Workflow::run() {
   /*=========================
     relabeling
   =========================*/
-  std::vector<PathType>::const_iterator res_path_it;
-
-  // #pragma omp parallel for
+  #pragma omp parallel for
   for (
     size_t timestep = options_.get_option<size_t>("time_range_0");
     timestep <= options_.get_option<size_t>("time_range_1");
     timestep++)
   {
-    seg_path_it = seg_path_vec_.begin() + timestep;
-    res_path_it = res_path_vec_.begin() + timestep;
+    std::vector<PathType>::const_iterator seg_path_it = seg_path_vec_.begin() + timestep;
+    std::vector<PathType>::const_iterator res_path_it = res_path_vec_.begin() + timestep;
 
     // read the label image
     vigra::MultiArray<N, LabelType> segmentation_image;
@@ -279,7 +277,7 @@ Lineage Workflow::run() {
 #else
     // relabel the image
     lineage.relabel<N>(segmentation_image, segmentation_image, timestep, coordinate_map_ptr);
-    if(options_.has_option<int>("dilateResult")) {
+    if(options_.has_option<int>("dilateResult") && options_.get_option<int>("dilateResult") > 0) {
       std::cout << "Dilate result" << std::endl;
       int radius = options_.get_option<int>("dilateResult");
       lineage.dilate<N>(segmentation_image, timestep, ts, radius);
