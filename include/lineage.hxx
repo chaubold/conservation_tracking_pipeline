@@ -60,6 +60,13 @@ class Lineage {
   // call clean_up() after remove(), otherwise there are inconsistencies within
   // a Lineage object
   void remove(const TraxelIndexType& traxel_index);
+  void new_splitted_track(
+    TraxelIndexVectorType::iterator it_new_begin,
+    TraxelIndexVectorType::iterator it_new_end,
+    LabelType old_track_id);
+  void check_track(
+    LabelType track_id,
+    TraxelIndexVectorType& traxels);
   void clean_up();
 
   LabelType track_count_;

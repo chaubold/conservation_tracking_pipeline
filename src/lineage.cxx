@@ -209,6 +209,59 @@ void Lineage::remove(const TraxelIndexType& traxel_index) {
   }
 }
 
+void Lineage::new_splitted_track(
+  TraxelIndexVectorType::iterator it_new_begin,
+  TraxelIndexVectorType::iterator it_new_end,
+  LabelType old_track_id)
+{
+  // get the new unique index of this track
+  LabelType new_track_id = track_count_ + track_index_offset_;
+  track_count_++;
+  // create the track in the track traxel map
+  TraxelIndexVectorType new_track_traxels(it_new_begin, it_new_end);
+  track_traxel_map_[new_track_id] = new_track_traxels;
+  for(auto it = it_new_begin; it != it_new_end; it++) {
+    // link it correctly in the traxel track map
+    traxel_track_map_[*it] = new_track_id;
+  }
+  // update the track parent map
+  for(
+    auto it = track_track_parent_map_.begin();
+    it != track_track_parent_map_.end();
+    it++)
+  {
+    // link children of the old track id to the new track id
+    if(it->second == old_track_id) {
+      it->second = new_track_id;
+    }
+  }
+  // link the new track to the correct parent
+  track_track_parent_map_[new_track_id] = old_track_id;
+}
+
+void Lineage::check_track(
+  LabelType track_id,
+  TraxelIndexVectorType& traxels)
+{
+  // only check for continous time if length lanrger than one
+  if (traxels.size() > 1) {
+    // loop back in time
+    TraxelIndexVectorType::iterator t_it = traxels.end() - 1;
+    LabelType prev_timestep = t_it->first;
+    do {
+      t_it--;
+      // check if the time difference is one - if not: split the track up
+      if (prev_timestep - t_it->first > 1) {
+        TraxelIndexVectorType::iterator it_new_begin = t_it + 1;
+        TraxelIndexVectorType::iterator it_new_end = traxels.end();
+        new_splitted_track(it_new_begin, it_new_end, track_id);
+        traxels.erase(it_new_begin, it_new_end);
+      }
+      prev_timestep = t_it->first;
+    } while (t_it != traxels.begin());
+  }
+}
+
 void Lineage::clean_up() {
   // lambda function to check if a traxel is removed from the lineage class
   auto not_in_lineage = [&] (const TraxelIndexType traxel_index) {
@@ -249,6 +302,11 @@ void Lineage::clean_up() {
         track_track_parent_map_.erase(tt_curr_it);
       }
     }
+  }
+  // split tracks up if they are interrupted
+  TrackTraxelIndexMapType::iterator tt_it = track_traxel_map_.begin();
+  for(;tt_it != track_traxel_map_.end(); tt_it++) {
+    check_track(tt_it->first, tt_it->second);
   }
 }
 
