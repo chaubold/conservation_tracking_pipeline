@@ -6,12 +6,12 @@ import argparse
 
 def getSearchParameterDicts(config):
     vary_parameters = {
-        "transParameter"    : [0.33, 3.0],
-        "detWeight"         : [0.33, 3.0],
-        "appearanceCost"    : [0.33, 3.0],
-        "disappearanceCost" : [0.33, 3.0],
-        "divWeight"         : [0.33, 3.0],
-        "transWeight"       : [0.33, 3.0]}
+        "transParameter"    : [0.5, 2.0],
+        "detWeight"         : [0.5, 2.0],
+        "appearanceCost"    : [0.5, 2.0],
+        "disappearanceCost" : [0.5, 2.0],
+        "divWeight"         : [0.5, 2.0],
+        "transWeight"       : [0.5, 2.0]}
     return_configs = []
     return_configs.append(config.copy())
     for key in vary_parameters:
