@@ -200,15 +200,16 @@ void Workflow::init(int argc, char* argv[]) {
   // get all filenames
   raw_path_vec_ = get_files(raw_dir, ".tif", true);
   if (calculate_segmentation_) {
-    seg_path_vec_ = create_filenames(seg_dir, "seg###.tif", raw_path_vec_.size());
+    seg_path_vec_ = create_filenames(seg_dir, "seg####.tif", raw_path_vec_.size());
   } else {
     seg_path_vec_ = get_files(seg_dir, ".tif", true);
-    if (seg_path_vec_.size() != raw_path_vec_.size()) {
+    if (seg_path_vec_.size() != raw_path_vec_.size() 
+      && seg_path_vec_.size() < (options_.get_option<int>("time_range_1") - options_.get_option<int>("time_range_0"))) {
       throw std::runtime_error(
-        "count of segmentation and raw images not the same");
+        "count of segmentation and raw images not the same or too low");
     }
   }
-  res_path_vec_ = create_filenames(res_dir, "mask###.tif", raw_path_vec_.size());
+  res_path_vec_ = create_filenames(res_dir, "mask####.tif", raw_path_vec_.size());
   res_path_ = fs::system_complete(res_dir.string() + "/res_track.txt");
   traxelstore_dump_path_ = fs::system_complete(seg_dir.string() + "/traxelstore.dump");
 }

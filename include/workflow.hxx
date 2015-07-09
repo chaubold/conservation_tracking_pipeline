@@ -149,6 +149,9 @@ Lineage Workflow::run() {
     raw_path_it != raw_path_vec_.end();
     raw_path_it++, seg_path_it++, timestep++)
   {
+    if (timestep >= 1 + options_.get_option<size_t>("time_range_1"))
+      break;
+
     std::cout << "processing " << raw_path_it->string() << std::endl;
     // create references to the traxels of the previous and the
     // current frame
@@ -260,6 +263,12 @@ Lineage Workflow::run() {
     timestep <= options_.get_option<size_t>("time_range_1");
     timestep++)
   {
+    // do not attempt to save image if we were moving further than we have filenames
+    if(timestep - options_.get_option<size_t>("time_range_0") >= res_path_vec_.size())
+    {
+      std::cout << "WARNING: tried to access invalid filename" << std::endl;
+      continue;
+    }
     std::vector<PathType>::const_iterator seg_path_it = seg_path_vec_.begin() + timestep;
     std::vector<PathType>::const_iterator res_path_it = res_path_vec_.begin() + timestep;
 

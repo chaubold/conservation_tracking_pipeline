@@ -88,7 +88,7 @@ struct Segmentation {
   vigra::MultiArray<N+1, DataType> prediction_map_;
   size_t label_count_;
   
-  void initialize(const vigra::MultiArray<N, DataType>& image);
+  void initialize(const vigra::MultiArray<N, DataType>& image, size_t num_classes = 2);
   int export_hdf5(const std::string filename);
   int read_hdf5(
     const std::string filename,

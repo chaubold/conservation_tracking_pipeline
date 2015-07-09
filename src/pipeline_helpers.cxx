@@ -353,6 +353,16 @@ EventVectorVectorType track(
         tracker.enable_appearance(false);
     }
 
+    if(options.has_option<bool>("enableAppearance") && !options.get_option<bool>("enableAppearance"))
+    {
+        tracker.enable_appearance(false);
+    }
+
+    if(options.has_option<bool>("enableDisappearance") && !options.get_option<bool>("enableDisappearance"))
+    {
+        tracker.enable_disappearance(false);
+    }
+
     // track
     boost::shared_ptr<EventVectorVectorType> ret_ptr(
       new EventVectorVectorType(tracker.track(

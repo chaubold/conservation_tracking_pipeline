@@ -46,7 +46,7 @@ ENDIF()
 INCLUDE_DIRECTORIES(
   "${PROJECT_SOURCE_DIR}/include/"
 )
-INCLUDE_DIRECTORIES(include ${CPLEX_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(include ${CPLEX_INCLUDE_DIRS} ${PGMLINK_INCLUDE_DIR})
 
 SET(WITH_CHECKED_STL "True" CACHE BOOL "Build with checked libg++ for more robust code (may degrade performance).")
 IF(WITH_CHECKED_STL)

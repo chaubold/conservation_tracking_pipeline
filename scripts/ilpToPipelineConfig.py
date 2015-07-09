@@ -31,6 +31,7 @@ if __name__ == "__main__":
 		scales = in_f['FeatureSelections/Scales']
 		featureNames = in_f['FeatureSelections/FeatureIds']
 		selectionMatrix = in_f['FeatureSelections/SelectionMatrix'].value
+		numPixelClassificationLabels = len(in_f['PixelClassification/ClassifierForests/known_labels'].value)
 
 		assert(selectionMatrix.shape[0] == featureNames.shape[0])
 		assert(selectionMatrix.shape[1] == scales.shape[0])
@@ -89,6 +90,7 @@ if __name__ == "__main__":
 			out_f.write('detWeight,10.0\n')
 			out_f.write('Channel,{}\n'.format(threshold_channel))
 			out_f.write('SingleThreshold,{}\n'.format(threshold_level))
+			out_f.write('NumPCLabels,{}\n'.format(numPixelClassificationLabels))
 			if params['z_range'][1] - params['z_range'][0] == 1:
 				out_f.write('nDim,2\n')
 			else:

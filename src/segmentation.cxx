@@ -343,14 +343,14 @@ template class FeatureCalculator<3>;
 //// struct Segmentation
 ////
 template<int N>
-void Segmentation<N>::initialize(const vigra::MultiArray<N, DataType>& image) {
+void Segmentation<N>::initialize(const vigra::MultiArray<N, DataType>& image, size_t num_classes) {
   if (segmentation_image_.shape() != image.shape()) {
     segmentation_image_.reshape(image.shape());
     label_image_.reshape(image.shape());
   }
   // TODO ugly
   typename vigra::MultiArrayShape<N+1>::type prediction_map_shape =
-    append_to_shape<N>(image.shape(), 2);
+    append_to_shape<N>(image.shape(), num_classes);
   prediction_map_.reshape(prediction_map_shape, 0.0);
 }
 
@@ -422,10 +422,11 @@ int SegmentationCalculator<N>::calculate(
   Segmentation<N>& segmentation) const
 {
   int return_status = 0;
+  int num_pixel_classification_labels = options_.get_option<int>("NumPCLabels");
   int channel_index = options_.get_option<int>("Channel");
   DataType prob_threshold = options_.get_option<DataType>("SingleThreshold");
   // initialize the segmentation
-  segmentation.initialize(image);
+  segmentation.initialize(image, num_pixel_classification_labels);
   // calculate the features and reshape them
   feature_calculator_ptr_->calculate(image, segmentation.feature_image_);
   // get the count of pixels in image
@@ -440,14 +441,14 @@ int SegmentationCalculator<N>::calculate(
     vigra::Shape2(pixel_count, feature_dim),
     segmentation.feature_image_.data());
   vigra::MultiArrayView<2, DataType> prediction_map_view(
-    vigra::Shape2(pixel_count, 2),
+    vigra::Shape2(pixel_count, num_pixel_classification_labels),
     segmentation.prediction_map_.data());
   // loop over all random forests for prediction probabilities
   std::cout << "\tPixel Classification" << std::endl;
   #pragma omp parallel for
   for(size_t rf = 0; rf < random_forests_.size(); rf++)
   {
-    vigra::MultiArray<2, DataType> prediction_temp(pixel_count, 2);
+    vigra::MultiArray<2, DataType> prediction_temp(pixel_count, num_pixel_classification_labels);
     random_forests_[rf].predictProbabilities(
       feature_view,
       prediction_temp);
