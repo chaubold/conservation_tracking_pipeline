@@ -296,6 +296,14 @@ Lineage Workflow::run() {
     save_multi_array<N>(segmentation_image, *res_path_it);
 #endif
   }
+  if(options_.has_option<std::string>("trackPositionExportLocation"))
+  {
+    std::cout << "saving track positions to " 
+              << options_.get_option<std::string>("trackPositionExportLocation") 
+              << std::endl;
+    lineage.export_track_positions(options_.get_option<std::string>("trackPositionExportLocation"), ts);
+  }
+
   // save lineage
   std::cout << "save lineage to " << res_path_.string() << std::endl;
   std::ofstream res_ofstream(res_path_.string());

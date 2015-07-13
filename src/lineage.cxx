@@ -4,6 +4,7 @@
 #include <vigra/flatmorphology.hxx> /* for DiskDilationWithMask */
 
 #include "lineage.hxx"
+#include "pipeline_helpers.hxx"
 
 namespace isbi_pipeline {
 
@@ -366,6 +367,39 @@ void Lineage::dilate_for_traxel<2>(
     };
     vigra::combineTwoImages(mask_dilated, subarray, subarray, set_id);
     // std::cout << "New subarray is" << std::endl << subarray;
+  }
+}
+
+void Lineage::export_track_positions(
+  const std::string& filename,
+  TraxelStoreType& ts
+  )
+{
+  std::ofstream pos_file(filename.c_str());
+  if(!pos_file.good())
+    throw std::runtime_error("Cannot open file to save track positions to");
+
+  for (
+    TrackTraxelIndexMapType::const_iterator it = track_traxel_map_.begin();
+    it != track_traxel_map_.end();
+    it++ )
+  {
+    const TraxelIndexVectorType& traxel_index_vector = it->second;
+    
+    for(TraxelIndexVectorType::const_iterator trax_it = traxel_index_vector.begin();
+        trax_it != traxel_index_vector.end();
+        ++trax_it)
+    {
+      try{
+        const pgmlink::Traxel& t = get_from_traxel_store(ts, trax_it->second, trax_it->first);
+        pos_file << it->first << ", " << t.X() << ", " << t.Y() 
+                 << ", " << t.Z() << ", " << trax_it->first << "\n";
+      }
+      catch(std::exception& e)
+      {
+        std::cout << "Warning: " << e.what() << std::endl;
+      }
+    }
   }
 }
 

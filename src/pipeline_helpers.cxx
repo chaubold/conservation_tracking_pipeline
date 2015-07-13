@@ -490,4 +490,22 @@ std::vector<PathType> create_filenames(
   return ret;
 }
 
+const pgmlink::Traxel& get_from_traxel_store(
+  TraxelStoreType& ts, 
+  unsigned int id, 
+  int timestep)
+{
+    pgmlink::TraxelStoreByTimeid::iterator it = (ts.get<pgmlink::by_timeid>().find(boost::make_tuple(timestep, id)));
+    if(it != ts.get<pgmlink::by_timeid>().end())
+    {
+        return *it;
+    }
+    else
+    {
+        std::stringstream msg;
+        msg << "Trying to access traxel that does not exist in traxelstore: id = " << id << ", timestep = " << timestep;
+        throw std::runtime_error(msg.str());
+    }
+}
+
 } // namespace isbi_pipeline

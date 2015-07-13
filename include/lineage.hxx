@@ -6,6 +6,7 @@
 #include <map> /* for std::map */
 #include <utility> /* for std::pair */
 #include <ostream> /* for overloading << */
+#include <fstream>
 
 // vigra
 #include <vigra/multi_array.hxx> /* for MultiArray */
@@ -40,6 +41,10 @@ class Lineage {
     const vigra::TinyVector<LabelType, N>& coord_max,
     const TraxelStoreType& traxelstore);
   void restrict_to_traxel_descendants(const TraxelVectorType traxels);
+
+  // to ease further analysis
+  void export_track_positions(const std::string& filename, TraxelStoreType& ts);
+
  private:
   template<int N>
   void dilate_for_traxel(

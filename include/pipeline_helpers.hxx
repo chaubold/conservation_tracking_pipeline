@@ -137,6 +137,8 @@ OutputIterator copy_if_own (
 template<typename T>
 void read_volume(T& volume, const std::string& filename);
 
+const pgmlink::Traxel& get_from_traxel_store(TraxelStoreType& ts, unsigned int id, int timestep);
+
 /* -------------------------------------------------- */
 /*                   IMPLEMENTATION                   */
 /* -------------------------------------------------- */
