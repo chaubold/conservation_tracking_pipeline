@@ -31,7 +31,7 @@ if __name__ == "__main__":
 		scales = in_f['FeatureSelections/Scales']
 		featureNames = in_f['FeatureSelections/FeatureIds']
 		selectionMatrix = in_f['FeatureSelections/SelectionMatrix'].value
-		numPixelClassificationLabels = len(in_f['PixelClassification/ClassifierForests/known_labels'].value)
+		numPixelClassificationLabels = len(in_f['PixelClassification/LabelNames'].value)
 
 		assert(selectionMatrix.shape[0] == featureNames.shape[0])
 		assert(selectionMatrix.shape[1] == scales.shape[0])
