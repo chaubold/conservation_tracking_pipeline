@@ -65,6 +65,9 @@ ADD_DEFINITIONS(-DIL_STD)
 # add flags for vigra, otherwise we would get name conflicts
 ADD_DEFINITIONS(-DWITH_LEMON -DWITH_BOOST_GRAPH)
 
+# opengm defines: do not include LPDef symbols everywhere
+ADD_DEFINITIONS(-DOPENGM_LPDEF_NO_SYMBOLS)
+
 SET(PIPELINE_HELPERS_SRC
   src/pipeline_helpers.cxx
   src/segmentation.cxx
