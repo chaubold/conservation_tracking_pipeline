@@ -36,6 +36,16 @@ cd build
 make install
 ```
 
+With this pgmlink version installed, you can clone, configure and build this C++ pipeline:
+```
+git clone https://github.com/chaubold/conservation_tracking_pipeline
+cd conservation_tracking_pipeline
+mkdir build
+cd build
+cmake .. -DCMAKE_INSTALL_PREFIX /path/to/your/miniconda/envs/ilastikdev -DCPLEX_ROOT_DIR /path/to/your/cplex/root
+make -j
+```
+
 ## Usage
 
 Let's assume you trained a pixel classification project `pc.ilp`, 
@@ -58,10 +68,14 @@ This will create a set of files in `/my/existing/out/dir`:
 Using these files, the raw tiff images in `/path/to/dataset/raw_images` and two empty existing directories for the resulting segmentation (after pixel classification and thresholding) `/path/to/dataset/segmentations`, as well as resulting relabeled segmentations after tracking (where each tracked object is colored in its track ID) `/path/to/dataset/result`, the pipeline can be run as follows:
 
 ```
-/path/to/dataset/raw_images /path/to/dataset/segmentations /path/to/dataset/result /my/existing/out/dir/tracking_config.txt /my/existing/out/dir/classifier.h5 /my/existing/out/dir/features.txt /my/existing/out/dir/object_count_features.txt /my/existing/out/dir/division_features.txt
+python /path/to/this/repo/build/isbi_pipeline /path/to/dataset/raw_images /path/to/dataset/segmentations /path/to/dataset/result /my/existing/out/dir/tracking_config.txt /my/existing/out/dir/classifier.h5 /my/existing/out/dir/features.txt /my/existing/out/dir/object_count_features.txt /my/existing/out/dir/division_features.txt
 ```
 
 The file naming conventions for input and resulting files are subject to the Cell Tracking Challenge [Guidelines](http://ctc2015.gryf.fi.muni.cz/Public/Documents/Naming%20and%20file%20content%20conventions.pdf)
+
+#### Notes:
+* The `isbi_pipeline32` and `tracking32` executables are using a label space of type `uint32` whereas the default pipeline uses `uint16`. This is because one dataset in the ISBI challenge exceeded the number of labels representable by 16 bit.
+* The `tracking` executables are meant to work on previously obtained segmentations. Thus after running the `isbi_pipeline` once, you only need to run `tracking` again if you did not change of the parameters related to pixel classification.
 
 ## References
 
