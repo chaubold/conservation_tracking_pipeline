@@ -3,6 +3,7 @@ import glob
 import os
 import ntpath
 import numpy
+import matplotlib
 import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
@@ -17,8 +18,11 @@ if __name__ == "__main__":
     input_folder = sys.argv[1].rstrip('/')
     output_folder = sys.argv[2].rstrip('/')
     # get the remapping
-    permutation = numpy.zeros(max_id + 1).astype(numpy.uint8)
-    permutation[1:] = numpy.random.permutation(max_id) + 1
+    #permutation = numpy.zeros(max_id + 1).astype(numpy.uint8)
+    #permutation[1:] = numpy.random.permutation(max_id) + 1
+    cmap_data = numpy.random.rand ( max_id, 3)
+    cmap_data[0,:] = numpy.array([0,0,0])
+    cmap = matplotlib.colors.ListedColormap ( cmap_data )
     # loop over all *.tif files
     for filename in glob.glob("{}/*.tif".format(sys.argv[1])):
         filename_new = "{}/{}.png".format(
@@ -26,10 +30,12 @@ if __name__ == "__main__":
             os.path.splitext(ntpath.basename(filename))[0])
         print "Convert {} to {}".format(filename, filename_new)
         # read the file
-        image = plt.imread(filename).astype(numpy.uint8)[:,:,0]
+        image = plt.imread(filename).astype(numpy.uint8)
+        #image = vigra.imprex.readImage(filename).astype(numpy.uint8)[:,:,0]
         image = numpy.flipud(image)
-        for n in range(1,image.max() + 1, 1):
-            image[image == n] = permutation[n]
+        #for n in range(1,image.max() + 1, 1):
+        #    image[image == n] = permutation[n]
+        
         # save with new colormap
-        plt.imsave(filename_new, image, vmin=0, vmax=max_id)
+        plt.imsave(filename_new, image, vmin=0, vmax=max_id, cmap=cmap)
     
