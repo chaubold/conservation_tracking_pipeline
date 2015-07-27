@@ -51,7 +51,7 @@ SET(ADDITIONAL_PGMLINK_INCLUDE_DIR "" CACHE PATH "Path to pgmlink/pgmlink_export
 
 INCLUDE_DIRECTORIES(include ${CPLEX_INCLUDE_DIRS} ${PGMLINK_INCLUDE_DIR} ${ADDITIONAL_PGMLINK_INCLUDE_DIR})
 
-SET(WITH_CHECKED_STL "True" CACHE BOOL "Build with checked libg++ for more robust code (may degrade performance).")
+SET(WITH_CHECKED_STL "False" CACHE BOOL "Build with checked libg++ for more robust code (may degrade performance).")
 IF(WITH_CHECKED_STL)
   ADD_DEFINITIONS(-D_GLIBCXX_DEBUG)
 ENDIF()
