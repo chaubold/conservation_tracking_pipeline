@@ -46,7 +46,10 @@ git clone https://github.com/chaubold/conservation_tracking_pipeline
 cd conservation_tracking_pipeline
 mkdir build
 cd build
-cmake .. -DCMAKE_INSTALL_PREFIX /path/to/your/miniconda/envs/ilastikdev -DCPLEX_ROOT_DIR /path/to/your/cplex/root
+CC=/path/to/your/miniconda/envs/ilastikdev/bin/gcc \
+CXX=/path/to/your/miniconda/envs/ilastikdev/bin/g++ \
+cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/your/miniconda/envs/ilastikdev -DCPLEX_ROOT_DIR=/path/to/your/cplex/root \
+-DVIGRA_INCLUDE_DIR=/path/to/your/miniconda/envs/ilastikdev/include/ \ -DADDITIONAL_PGMLINK_INCLUDE_DIR=/path/to/your/pgmlink/build/include
 make -j
 ```
 
