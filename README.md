@@ -16,7 +16,11 @@ It was originally developed for the ISBI 2015 Cell Tracking Challenge, and is th
 
 *Disclaimer*: this was never compiled or tested on Windows!
 
-The easiest way to get this compiled is by having a [conda setup](https://github.com/ilastik/ilastik-build-conda) of `ilastik-everything`, let's assume that the respective conda environment is called `ilastikdev`. You also need the https://github.com/ilastik/ilastik-build-conda repository cloned somewhere locally.
+The easiest way to get this compiled is by having a [conda setup](https://github.com/ilastik/ilastik-build-conda) of `ilastik-everything`, let's assume that the respective conda environment is called `ilastikdev`. You also need the https://github.com/ilastik/ilastik-build-conda repository cloned somewhere locally. With your environment activated, install our gcc version as follows:
+
+```
+conda install -c ilastik gcc
+```
 
 Then you need to clone [pgmlink](https://github.com/martinsch/pgmlink) yourself to check out a different (isbi_challenge_15) branch as follows
 ```
