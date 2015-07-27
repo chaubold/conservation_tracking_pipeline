@@ -46,10 +46,11 @@ git clone https://github.com/chaubold/conservation_tracking_pipeline
 cd conservation_tracking_pipeline
 mkdir build
 cd build
+export LD_LIBRARY_PATH=/path/to/your/miniconda/envs/ilastikdev/lib # or DYLD_FALLBACK_LIBRARY_PATH on OSX
 CC=/path/to/your/miniconda/envs/ilastikdev/bin/gcc \
 CXX=/path/to/your/miniconda/envs/ilastikdev/bin/g++ \
 cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/your/miniconda/envs/ilastikdev -DCPLEX_ROOT_DIR=/path/to/your/cplex/root \
--DVIGRA_INCLUDE_DIR=/path/to/your/miniconda/envs/ilastikdev/include/ \ -DADDITIONAL_PGMLINK_INCLUDE_DIR=/path/to/your/pgmlink/build/include
+-DVIGRA_INCLUDE_DIR=/path/to/your/miniconda/envs/ilastikdev/include/ \ -DADDITIONAL_PGMLINK_INCLUDE_DIR=/path/to/your/pgmlink/build/include -DWITH_CHECKED_STL=OFF
 make -j
 ```
 
