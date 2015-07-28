@@ -369,6 +369,9 @@ template<int N>
 int TraxelExtractor<N>::get_detection_probability(
   FeatureMapType& feature_map) const
 {
+  if(random_forests_.size() < 1){
+    throw std::runtime_error("Cannot extract detection probability without RF");
+  }
   // get the size of the feature vector
   size_t feature_size = 0;
   for(std::string feature : feature_selection_) {
@@ -392,12 +395,13 @@ int TraxelExtractor<N>::get_detection_probability(
     offset += size;
   }
   // evaluate the random forests
+  size_t num_classes = random_forests_[0].ext_param_.class_count_;
   vigra::MultiArray<2, FeatureType> probabilities(
-    vigra::Shape2(1, max_object_num_ + 1),
+    vigra::Shape2(1, num_classes),
     0.0);
   for (size_t n = 0; n < random_forests_.size(); n++) {
     vigra::MultiArray<2, FeatureType> probabilities_temp(
-      vigra::Shape2(1, max_object_num_ + 1));
+      vigra::Shape2(1, num_classes));
     random_forests_[n].predictProbabilities(features, probabilities_temp);
     probabilities += probabilities_temp;
   }
