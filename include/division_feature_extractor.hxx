@@ -356,18 +356,33 @@ void DivisionFeatureExtractor<N, LabelType>::get_division_probability(
 	pgmlink::Traxel& traxel)
 {
 	// get the size of the feature vector
-	size_t feature_size = feature_selection.size();
-	// get all features into one multi array
-	vigra::MultiArray<2, FeatureType> features(vigra::Shape2(1, feature_size));
-	for(size_t offset = 0; offset < feature_size; offset++) {
-		const std::string& feature_name = feature_selection[offset];
+	size_t offset = 0;
+	for(size_t feature_idx = 0; feature_idx < feature_selection.size(); feature_idx++) {
+		const std::string& feature_name = feature_selection[feature_idx];
 		if (traxel.features.count(feature_name) == 0) {
 			throw std::runtime_error("Feature " + feature_name + " not found");
-			features(0, offset) = 0.0f;
 		} else {
-			features(0, offset) = traxel.features[feature_name][0];
+			offset += traxel.features[feature_name].size();
 		}
 	}
+
+	size_t feature_size = offset;
+	
+	// get all features into one multi array
+	vigra::MultiArray<2, FeatureType> features(vigra::Shape2(1, feature_size));
+	offset = 0;
+	for(size_t feature_idx = 0; feature_idx < feature_selection.size(); feature_idx++) {
+		const std::string& feature_name = feature_selection[feature_idx];
+		if (traxel.features.count(feature_name) == 0) {
+			throw std::runtime_error("Feature " + feature_name + " not found");
+			features(0, offset++) = 0.0f;
+		} else {
+			for(size_t i = 0; i < traxel.features[feature_name].size(); i++) {
+				features(0, offset++) = traxel.features[feature_name][i];
+			}
+		}
+	}
+	
 	// evaluate the random forests
 	vigra::MultiArray<2, FeatureType> probabilities(vigra::Shape2(1, 2), 0.0);
 	for (size_t n = 0; n < random_forests.size(); n++) {
