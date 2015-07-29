@@ -198,9 +198,13 @@ void Workflow::init(int argc, char* argv[]) {
   load_features(cnt_feature_list_, cnt_feature_file);
   load_features(div_feature_list_, div_feature_file);
   // get all filenames
+  std::string placeholder = "###";
+  if(options_.has_option<std::string>("FileNumberingPlaceholder"))
+	  placeholder = options_.get_option<std::string>("FileNumberingPlaceholder");
+
   raw_path_vec_ = get_files(raw_dir, ".tif", true);
   if (calculate_segmentation_) {
-    seg_path_vec_ = create_filenames(seg_dir, "seg####.tif", raw_path_vec_.size());
+    seg_path_vec_ = create_filenames(seg_dir, "seg" + placeholder + ".tif", raw_path_vec_.size());
   } else {
     seg_path_vec_ = get_files(seg_dir, ".tif", true);
     if (seg_path_vec_.size() != raw_path_vec_.size() 
@@ -209,7 +213,7 @@ void Workflow::init(int argc, char* argv[]) {
         "count of segmentation and raw images not the same or too low");
     }
   }
-  res_path_vec_ = create_filenames(res_dir, "mask####.tif", raw_path_vec_.size());
+  res_path_vec_ = create_filenames(res_dir, "mask" + placeholder + ".tif", raw_path_vec_.size());
   res_path_ = fs::system_complete(res_dir.string() + "/res_track.txt");
   traxelstore_dump_path_ = fs::system_complete(seg_dir.string() + "/traxelstore.dump");
 }
